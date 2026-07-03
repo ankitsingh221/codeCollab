@@ -20,6 +20,9 @@
     "express": "^5.2.1",
     "mongoose": "^9.7.3",
     "nodemailer": "^9.0.3",
-    "nodemon": "^3.1.14"
+    "nodemon": "^3.1.14",
+    "socket.io": "^4.8.3",
+    "y-protocols": "^1.0.7",
+    "yjs": "^13.6.31"
   }
 }

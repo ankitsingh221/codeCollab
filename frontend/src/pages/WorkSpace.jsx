@@ -9,6 +9,9 @@ import LivePreview from '../components/LivePreview';
 import RunPanel from '../components/RunPanel';
 import { isPreviewLanguage, isExecutable } from '../utils/executableLanguages';
 import { Button } from '@/components/ui/button';
+import { connectSocket, disconnectSocket, getSocket } from '../socket/socket';
+import { useWorkspacePresence } from '../hooks/useWorkspacePresence';
+import OnlineUsers from '../components/OnlineUsers';
 import {
   ArrowLeft,
   Users,
@@ -57,6 +60,42 @@ const WorkSpace = () => {
   useEffect(() => {
     fetchData();
   }, [workspaceId]);
+
+    const onlineUsers = useWorkspacePresence(workspaceId);
+
+// Connect socket for the lifetime of this page; listen for cross-user file sidebar sync
+useEffect(() => {
+  connectSocket();
+  const socket = getSocket();
+
+  const handleCreated = ({ file }) => {
+    setFiles((prev) => {
+      if (prev.some((f) => f._id === file._id)) return prev;
+      return [...prev, file].sort((a, b) => a.name.localeCompare(b.name));
+    });
+  };
+
+  const handleRenamed = ({ file }) => {
+    setFiles((prev) => prev.map((f) => (f._id === file._id ? { ...f, ...file } : f)));
+    setActiveFile((prev) => (prev?._id === file._id ? { ...prev, ...file } : prev));
+  };
+
+  const handleDeleted = ({ fileId }) => {
+    setFiles((prev) => prev.filter((f) => f._id !== fileId));
+    setActiveFile((prev) => (prev?._id === fileId ? null : prev));
+  };
+
+  socket.on('workspace:file-created', handleCreated);
+  socket.on('workspace:file-renamed', handleRenamed);
+  socket.on('workspace:file-deleted', handleDeleted);
+
+  return () => {
+    socket.off('workspace:file-created', handleCreated);
+    socket.off('workspace:file-renamed', handleRenamed);
+    socket.off('workspace:file-deleted', handleDeleted);
+    disconnectSocket();
+  };
+}, [workspaceId]);
 
   const handleFileCreated = (file) => {
     setFiles((prev) => [...prev, file].sort((a, b) => a.name.localeCompare(b.name)));
@@ -113,6 +152,7 @@ const WorkSpace = () => {
           <div className="min-w-0">
             <h1 className="text-sm font-semibold text-white/90 truncate">{workspace?.name}</h1>
           </div>
+          <OnlineUsers users={onlineUsers} />
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
@@ -191,11 +231,7 @@ const WorkSpace = () => {
         <main className="flex-1 flex min-w-0">
           {activeFile ? (
             <div className={`min-w-0 ${showSidePanel && activeMode ? 'w-1/2' : 'w-full'}`}>
-              <FileEditor
-                workspaceId={workspaceId}
-                file={activeFile}
-                onContentSynced={handleContentSynced}
-              />
+              <FileEditor file={activeFile} onContentSynced={handleContentSynced} />
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-[#0b0b0b]">
