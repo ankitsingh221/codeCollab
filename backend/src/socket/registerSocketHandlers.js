@@ -50,13 +50,16 @@ export const registerSocketHandlers = (io) => {
     });
 
     // ---------- File-level collaborative editing (Yjs) ----------
-    socket.on("file:join", async ({ fileId }) => {
-      try {
-        const session = await getOrCreateSession(fileId);
-        registerClient(fileId, socket.id);
-        socket.join(`file:${fileId}`);
-        socket.data.currentFileId = fileId;
+   socket.on("file:join", async ({ fileId }) => {
+  try {
+    if (!socket.data.joinedFiles) socket.data.joinedFiles = new Set();
+    if (socket.data.joinedFiles.has(fileId)) return; // already joined, ignore StrictMode's duplicate call
 
+    const session = await getOrCreateSession(fileId);
+    registerClient(fileId, socket.id);
+    socket.data.joinedFiles.add(fileId);
+    socket.join(`file:${fileId}`);
+    socket.data.currentFileId = fileId;
         if (!session.listenerAttached) {
           session.awareness.on("update", (changes, origin) => {
             if (typeof origin === "string" && origin !== "server") {
@@ -102,10 +105,11 @@ export const registerSocketHandlers = (io) => {
     });
 
     socket.on("file:leave", async ({ fileId }) => {
-      socket.leave(`file:${fileId}`);
-      await disconnectClient(fileId, socket.id);
-      if (socket.data.currentFileId === fileId) socket.data.currentFileId = null;
-    });
+  socket.leave(`file:${fileId}`);
+  socket.data.joinedFiles?.delete(fileId);
+  await disconnectClient(fileId, socket.id);
+  if (socket.data.currentFileId === fileId) socket.data.currentFileId = null;
+});
 
     // ---------- Disconnect cleanup ----------
     socket.on("disconnect", async () => {

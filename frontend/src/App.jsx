@@ -9,6 +9,8 @@ import Dashboard from "./pages/Dashboard";
 import WorkSpace from "./pages/WorkSpace";
 import MembersManagement from "./pages/MembersManagement";
 import InviteUser from "./pages/InviteUser";
+import WorkspaceSettings from './pages/WorkspaceSettings';
+
 
 function App() {
   return (
@@ -25,6 +27,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/profile" element={<Profile />} />
+              <Route path="/workspace/:workspaceId/settings" element={<WorkspaceSettings />} />
               <Route path="/workspace/:workspaceId/members" element={<MembersManagement />} />
               <Route path="/workspace/:workspaceId/invite" element={<InviteUser />} />
               <Route path="/workspace/:workspaceId" element={<WorkSpace />} />

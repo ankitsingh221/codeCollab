@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { memberApi } from '../api/memberApi';
+import { getId } from '../utils/getId';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -22,7 +22,7 @@ const MembersManagement = () => {
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
 
-  const myMembership = members.find((m) => m.userId?.id === user?.id);
+  const myMembership = members.find((m) => getId(m.userId) === getId(user));
   const isOwner = myMembership?.role === 'owner';
 
   const fetchMembers = async () => {
@@ -58,7 +58,7 @@ const MembersManagement = () => {
     setUpdatingId(memberId);
     try {
       await memberApi.remove(workspaceId, memberId);
-      setMembers((prev) => prev.filter((m) => m.id !== memberId));
+      setMembers((prev) => prev.filter((m) => getId(m) !== memberId));
     } catch (err) {
       console.error(err);
     } finally {
@@ -70,13 +70,6 @@ const MembersManagement = () => {
     <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#0d0d0d] to-[#0a0a0a] text-white relative overflow-hidden">
       <div className="absolute top-[-300px] right-[-200px] w-[600px] h-[600px] rounded-full bg-rose-500/10 blur-3xl animate-pulse"></div>
       <div className="absolute bottom-[-300px] left-[-200px] w-[600px] h-[600px] rounded-full bg-cyan-500/10 blur-3xl animate-pulse delay-1000"></div>
-
-      <div
-        className="absolute inset-0 pointer-events-none opacity-20"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cdefs%3E%3Cpattern id='grid' width='60' height='60' patternUnits='userSpaceOnUse'%3E%3Cpath d='M60 0 L0 0 0 60' fill='none' stroke='rgba(255,255,255,0.05)' stroke-width='0.5'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23grid)'/%3E%3C/svg%3E")`,
-        }}
-      />
 
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <Button
@@ -123,10 +116,11 @@ const MembersManagement = () => {
             ) : (
               <div className="space-y-3">
                 {members.map((member) => {
-                  const isSelf = member.userId?.id === user?.id;
+                  const memberId = getId(member);
+                  const isSelf = getId(member.userId) === getId(user);
                   return (
                     <div
-                      key={member.id}
+                      key={memberId}
                       className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all duration-300"
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -146,8 +140,8 @@ const MembersManagement = () => {
                         {isOwner && !isSelf ? (
                           <Select
                             value={member.role}
-                            onValueChange={(role) => handleRoleChange(member.id, role)}
-                            disabled={updatingId === member.id}
+                            onValueChange={(role) => handleRoleChange(memberId, role)}
+                            disabled={updatingId === memberId}
                           >
                             <SelectTrigger className="w-28 h-8 text-xs bg-white/5 border-white/10 text-white rounded-lg">
                               <SelectValue />
@@ -171,11 +165,11 @@ const MembersManagement = () => {
 
                         {isOwner && !isSelf && (
                           <button
-                            onClick={() => handleRemove(member.id, member.userId?.name)}
-                            disabled={updatingId === member.id}
+                            onClick={() => handleRemove(memberId, member.userId?.name)}
+                            disabled={updatingId === memberId}
                             className="p-1.5 rounded-lg hover:bg-rose-500/10 text-white/30 hover:text-rose-400 transition-all duration-300 disabled:opacity-50"
                           >
-                            {updatingId === member.id ? (
+                            {updatingId === memberId ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
                             ) : (
                               <Trash2 className="w-4 h-4" />

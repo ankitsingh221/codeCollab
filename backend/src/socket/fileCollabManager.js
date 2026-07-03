@@ -23,29 +23,42 @@ const scheduleSave = (fileId) => {
   session.saveTimeout = setTimeout(() => persist(fileId, session.doc), SAVE_DEBOUNCE_MS);
 };
 
+
+const pendingSessions = new Map(); // fileId -> in-flight creation Promise, prevents race duplicates
+
 export const getOrCreateSession = async (fileId) => {
   if (sessions.has(fileId)) return sessions.get(fileId);
+  if (pendingSessions.has(fileId)) return pendingSessions.get(fileId);
 
-  const file = await File.findById(fileId);
-  if (!file) throw new Error("File not found");
+  const creationPromise = (async () => {
+    const file = await File.findById(fileId);
+    if (!file) throw new Error("File not found");
 
-  const doc = new Y.Doc();
-  const ytext = doc.getText("monaco");
-  ytext.insert(0, file.content || "");
+    const doc = new Y.Doc();
+    const ytext = doc.getText("monaco");
+    ytext.insert(0, file.content || "");
 
-  const awareness = new awarenessProtocol.Awareness(doc);
-  awareness.setLocalState(null); // server itself has no cursor
+    const awareness = new awarenessProtocol.Awareness(doc);
+    awareness.setLocalState(null);
 
-  const session = {
-    doc,
-    awareness,
-    clients: new Set(),
-    controlledIds: new Map(),
-    saveTimeout: null,
-    listenerAttached: false,
-  };
-  sessions.set(fileId, session);
-  return session;
+    const session = {
+      doc,
+      awareness,
+      clients: new Set(),
+      controlledIds: new Map(),
+      saveTimeout: null,
+      listenerAttached: false,
+    };
+    sessions.set(fileId, session);
+    return session;
+  })();
+
+  pendingSessions.set(fileId, creationPromise);
+  try {
+    return await creationPromise;
+  } finally {
+    pendingSessions.delete(fileId);
+  }
 };
 
 export const getSession = (fileId) => sessions.get(fileId);

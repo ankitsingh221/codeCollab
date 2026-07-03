@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { invitationApi } from '../api/invitationApi';
+import { getId } from '../utils/getId';
 import { Button } from '@/components/ui/button';
 import { Mail, Check, X, Loader2 } from 'lucide-react';
 
@@ -24,10 +25,11 @@ const PendingInvitations = ({ onAccepted }) => {
   }, []);
 
   const handleAccept = async (invitation) => {
-    setActingId(invitation.id);
+    const id = getId(invitation);
+    setActingId(id);
     try {
-      await invitationApi.accept(invitation.id);
-      setInvitations((prev) => prev.filter((i) => i.id !== invitation.id));
+      await invitationApi.accept(id);
+      setInvitations((prev) => prev.filter((i) => getId(i) !== id));
       onAccepted?.();
     } catch (error) {
       console.error('Error accepting invitation:', error);
@@ -37,10 +39,11 @@ const PendingInvitations = ({ onAccepted }) => {
   };
 
   const handleDecline = async (invitation) => {
-    setActingId(invitation.id);
+    const id = getId(invitation);
+    setActingId(id);
     try {
-      await invitationApi.decline(invitation.id);
-      setInvitations((prev) => prev.filter((i) => i.id !== invitation.id));
+      await invitationApi.decline(id);
+      setInvitations((prev) => prev.filter((i) => getId(i) !== id));
     } catch (error) {
       console.error('Error declining invitation:', error);
     } finally {
@@ -62,15 +65,16 @@ const PendingInvitations = ({ onAccepted }) => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {invitations.map((inv) => (
-          <div
-            key={inv.id}
-            className="group relative bg-white/5 backdrop-blur-xl border border-cyan-400/20 rounded-2xl p-4 overflow-hidden hover:border-cyan-400/40 transition-all duration-500"
-          >
-            <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+        {invitations.map((inv) => {
+          const invId = getId(inv);
+          return (
+            <div
+              key={invId}
+              className="group relative bg-white/5 backdrop-blur-xl border border-cyan-400/20 rounded-2xl p-4 overflow-hidden hover:border-cyan-400/40 transition-all duration-500"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
-            <div className="relative flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3 min-w-0">
+              <div className="relative flex items-start gap-3">
                 <div className="w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-rose-400/30 to-cyan-400/30 flex items-center justify-center text-xs font-medium text-white/80">
                   {inv.invitedBy?.name?.charAt(0).toUpperCase() || 'U'}
                 </div>
@@ -86,37 +90,37 @@ const PendingInvitations = ({ onAccepted }) => {
                   </span>
                 </div>
               </div>
-            </div>
 
-            <div className="relative flex gap-2 mt-4">
-              <Button
-                size="sm"
-                variant="ghost"
-                disabled={actingId === inv.id}
-                onClick={() => handleDecline(inv)}
-                className="flex-1 text-white/40 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all duration-300"
-              >
-                <X className="w-4 h-4 mr-1" />
-                Decline
-              </Button>
-              <Button
-                size="sm"
-                disabled={actingId === inv.id}
-                onClick={() => handleAccept(inv)}
-                className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-black font-semibold rounded-xl transition-all duration-300"
-              >
-                {actingId === inv.id ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Check className="w-4 h-4 mr-1" />
-                    Accept
-                  </>
-                )}
-              </Button>
+              <div className="relative flex gap-2 mt-4">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={actingId === invId}
+                  onClick={() => handleDecline(inv)}
+                  className="flex-1 text-white/40 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all duration-300"
+                >
+                  <X className="w-4 h-4 mr-1" />
+                  Decline
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={actingId === invId}
+                  onClick={() => handleAccept(inv)}
+                  className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-black font-semibold rounded-xl transition-all duration-300"
+                >
+                  {actingId === invId ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 mr-1" />
+                      Accept
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

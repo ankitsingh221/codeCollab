@@ -24,7 +24,7 @@ const workspaceSchema = new mongoose.Schema(
       default: true
     }
   },
-  { timestamps: true }
+   { timestamps: true, toJSON: { virtuals: true } }
 );
 
 

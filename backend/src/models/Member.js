@@ -18,7 +18,7 @@ const memberSchema = new mongoose.Schema(
       default: "editor" 
     },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true } }
 );
 
 // A user can only have one membership per workspace

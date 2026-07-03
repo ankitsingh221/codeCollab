@@ -1,0 +1,1 @@
+export const getId = (obj) => obj?.id || obj?._id || null;

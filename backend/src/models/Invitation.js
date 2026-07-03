@@ -8,7 +8,7 @@ const invitationSchema = new mongoose.Schema(
     invitedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     status: { type: String, enum: ["pending", "accepted", "declined"], default: "pending" },
   },
-  { timestamps: true }
+  { timestamps: true, toJSON: { virtuals: true } }
 );
 
 // Prevent duplicate pending invites to the same email for the same workspace

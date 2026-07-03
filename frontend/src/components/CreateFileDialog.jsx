@@ -1,35 +1,35 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { fileApi } from '../api/fileApi';
-import { Plus, Loader2, X, FilePlus2 } from 'lucide-react';
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { fileApi } from "../api/fileApi";
+import { Plus, Loader2, X, FilePlus2 } from "lucide-react";
 
 const QUICK_TEMPLATES = [
-  { label: 'HTML', ext: 'html' },
-  { label: 'CSS', ext: 'css' },
-  { label: 'JS', ext: 'js' },
-  { label: 'Python', ext: 'py' },
-  { label: 'C++', ext: 'cpp' },
+  { label: "HTML", ext: "html" },
+  { label: "CSS", ext: "css" },
+  { label: "JS", ext: "js" },
+  { label: "Python", ext: "py" },
+  { label: "C++", ext: "cpp" },
 ];
 
 const CreateFileDialog = ({ workspaceId, onCreated }) => {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState('');
-  const [error, setError] = useState('');
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!name.trim()) return;
-    setError('');
+    setError("");
     setLoading(true);
     try {
       const response = await fileApi.create(workspaceId, name.trim());
       onCreated(response.data.file);
-      setName('');
+      setName("");
       setOpen(false);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create file');
+      setError(err.response?.data?.message || "Failed to create file");
     } finally {
       setLoading(false);
     }
@@ -63,8 +63,8 @@ const CreateFileDialog = ({ workspaceId, onCreated }) => {
             type="button"
             onClick={() => {
               setOpen(false);
-              setError('');
-              setName('');
+              setError("");
+              setName("");
             }}
             className="text-white/30 hover:text-white shrink-0"
           >
@@ -79,7 +79,9 @@ const CreateFileDialog = ({ workspaceId, onCreated }) => {
             <button
               key={tpl.ext}
               type="button"
-              onClick={() => setName(name.includes('.') ? name : `untitled.${tpl.ext}`)}
+              onClick={() =>
+                setName(name.includes(".") ? name : `untitled.${tpl.ext}`)
+              }
               className="text-[10px] px-2 py-1 rounded-md bg-white/5 hover:bg-white/10 text-white/40 hover:text-white/70 transition-colors"
             >
               {tpl.label}
@@ -93,7 +95,11 @@ const CreateFileDialog = ({ workspaceId, onCreated }) => {
           disabled={loading || !name.trim()}
           className="w-full h-8 bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white text-xs font-semibold rounded-lg"
         >
-          {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Create'}
+          {loading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            "Create"
+          )}
         </Button>
       </form>
     </div>
