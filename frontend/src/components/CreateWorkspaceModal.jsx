@@ -1,22 +1,22 @@
-import { useState, useEffect, useRef } from 'react';
-import { workspaceApi } from '../api/workspaceApi';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { X, Loader2, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import { workspaceApi } from "../api/workspaceApi";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { X, Loader2, Sparkles, Plus } from "lucide-react";
 
 const CreateWorkspaceModal = ({ isOpen, onClose, onWorkspaceCreated }) => {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const inputRef = useRef(null);
 
   useEffect(() => {
     if (isOpen) {
-      setName('');
-      setDescription('');
-      setError('');
+      setName("");
+      setDescription("");
+      setError("");
       setTimeout(() => {
         if (inputRef.current) {
           inputRef.current.focus();
@@ -29,19 +29,19 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onWorkspaceCreated }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
       const response = await workspaceApi.createWorkspace({
         name: name.trim(),
-        description: description.trim()
+        description: description.trim(),
       });
-      
+
       onWorkspaceCreated(response.data.workspace);
       onClose();
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to create workspace');
+      setError(error.response?.data?.message || "Failed to create workspace");
     } finally {
       setLoading(false);
     }
@@ -74,15 +74,22 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onWorkspaceCreated }) => {
           <div className="mb-6">
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-xs text-white/60 tracking-wider uppercase mb-3">
               <Sparkles className="w-3 h-3 text-rose-400" />
-              <span className="bg-gradient-to-r from-rose-400 to-cyan-400 bg-clip-text text-transparent font-semibold">New Workspace</span>
+              <span className="bg-gradient-to-r from-rose-400 to-cyan-400 bg-clip-text text-transparent font-semibold">
+                New Workspace
+              </span>
             </div>
             <h2 className="text-2xl font-light text-white">Create Workspace</h2>
-            <p className="text-sm text-white/40 mt-1">Create a new workspace to start collaborating with your team</p>
+            <p className="text-sm text-white/40 mt-1">
+              Create a new workspace to start collaborating with your team
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-white/60 text-sm font-medium">
+              <Label
+                htmlFor="name"
+                className="text-white/60 text-sm font-medium"
+              >
                 Workspace Name <span className="text-rose-400">*</span>
               </Label>
               <Input
@@ -101,8 +108,12 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onWorkspaceCreated }) => {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="description" className="text-white/60 text-sm font-medium">
-                Description <span className="text-white/20 text-xs">(optional)</span>
+              <Label
+                htmlFor="description"
+                className="text-white/60 text-sm font-medium"
+              >
+                Description{" "}
+                <span className="text-white/20 text-xs">(optional)</span>
               </Label>
               <textarea
                 id="description"
@@ -124,27 +135,33 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onWorkspaceCreated }) => {
               </div>
             )}
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-white/5">
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={onClose}
-                className="flex-1 border-white/10 hover:border-rose-400/30 hover:bg-white/5 text-white/60 hover:text-white rounded-xl transition-all duration-300"
+                className="sm:flex-1 bg-white/5 hover:bg-white/10 backdrop-blur-sm text-white/40 hover:text-white rounded-xl transition-all duration-300 border border-white/5 hover:border-white/10"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={loading || !name.trim()}
-                className="flex-1 bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold rounded-xl hover:shadow-xl hover:shadow-rose-500/25 transition-all duration-300 border border-white/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="sm:flex-[1.5] relative overflow-hidden bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold rounded-xl transition-all duration-300 border border-white/20 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 group"
               >
+                {/* Shine effect */}
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
                 {loading ? (
                   <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
                     Creating...
                   </>
                 ) : (
-                  'Create Workspace'
+                  <>
+                    <Plus className="w-4 h-4 mr-2 inline group-hover:rotate-90 transition-transform duration-300" />
+                    Create Workspace
+                  </>
                 )}
               </Button>
             </div>

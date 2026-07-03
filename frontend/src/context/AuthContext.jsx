@@ -10,9 +10,18 @@ export const AuthProvider = ({ children }) => {
 
   const bootstrapAuth = async () => {
     try {
+      const accessToken = localStorage.getItem("accessToken");
+      const refreshToken = localStorage.getItem("refreshToken");
+      
+      // If no tokens exist, skip the refresh attempt
+      if (!accessToken && !refreshToken) {
+        setLoading(false);
+        return;
+      }
+
       const { data } = await axios.post(
         `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/auth/refresh`,
-        {},
+        { refreshToken: refreshToken },
         {
           withCredentials: true,
           headers: {
@@ -20,18 +29,22 @@ export const AuthProvider = ({ children }) => {
           },
         },
       );
+      
       if (data.accessToken) {
         localStorage.setItem("accessToken", data.accessToken);
-        if (data.refreshToken)
+        if (data.refreshToken) {
           localStorage.setItem("refreshToken", data.refreshToken);
+        }
         setUser(data.user);
       } else {
         throw new Error("No access token received");
       }
     } catch (error) {
       console.error("Auth bootstrap error:", error);
-      setUser(null);
+      // Clear invalid tokens
       localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -92,4 +105,10 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};

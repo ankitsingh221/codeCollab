@@ -1,4 +1,5 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -15,7 +16,9 @@ import {
   Shield,
   MessageSquare,
   GitBranch,
+  LogOut,
 } from "lucide-react";
+import { useEffect } from "react";
 
 const features = [
   {
@@ -42,6 +45,29 @@ const features = [
 ];
 
 const Landing = () => {
+  const { user, loading, logout } = useAuth();
+  const navigate = useNavigate();
+
+  // If user is logged in, redirect to dashboard
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard');
+    }
+  }, [user, loading, navigate]);
+
+  const handleLogout = async () => {
+    await logout();
+    // Stay on landing page after logout
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-rose-400 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen overflow-y-auto bg-gradient-to-br from-[#0a0a0a] via-[#0d0d0d] to-[#0a0a0a] text-white overflow-x-hidden relative">
       {/* Glass overlay lines */}
@@ -55,7 +81,7 @@ const Landing = () => {
       {/* Glassmorphism nav */}
       <nav className="relative mx-auto mt-4 sm:mt-6 px-6 py-4 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-2xl max-w-7xl">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3 group">
+          <Link to="/" className="flex items-center gap-3 group">
             <div className="relative">
               <div className="absolute inset-0 bg-gradient-to-r from-rose-400 to-cyan-400 rounded-lg blur-md opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
               <div className="relative bg-black/50 p-2 rounded-lg border border-white/10">
@@ -68,22 +94,44 @@ const Landing = () => {
                 Collab
               </span>
             </span>
-          </div>
+          </Link>
 
           <div className="flex gap-2">
-            <Button
-              variant="ghost"
-              asChild
-              className="text-white/60 hover:text-white hover:bg-white/10 transition-all duration-300 rounded-xl"
-            >
-              <Link to="/login">Log In</Link>
-            </Button>
-            <Button
-              asChild
-              className="bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold rounded-xl px-6 hover:shadow-xl hover:shadow-rose-500/25 transition-all duration-300 border border-white/20"
-            >
-              <Link to="/signup">Sign Up</Link>
-            </Button>
+            {user ? (
+              <>
+                <Button
+                  variant="ghost"
+                  asChild
+                  className="text-white/60 hover:text-white hover:bg-white/10 transition-all duration-300 rounded-xl"
+                >
+                  <Link to="/dashboard">Dashboard</Link>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleLogout}
+                  className="text-white/40 hover:text-rose-400 hover:bg-white/5 transition-all duration-300 rounded-xl"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  asChild
+                  className="text-white/60 hover:text-white hover:bg-white/10 transition-all duration-300 rounded-xl"
+                >
+                  <Link to="/login">Log In</Link>
+                </Button>
+                <Button
+                  asChild
+                  className="bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold rounded-xl px-6 hover:shadow-xl hover:shadow-rose-500/25 transition-all duration-300 border border-white/20"
+                >
+                  <Link to="/signup">Sign Up</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </nav>
@@ -116,16 +164,29 @@ const Landing = () => {
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row gap-4">
-              <Button
-                size="lg"
-                asChild
-                className="group bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold px-10 rounded-2xl hover:shadow-2xl hover:shadow-rose-500/30 transition-all duration-300 border border-white/20"
-              >
-                <Link to="/signup">
-                  Get Started Free
-                  <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 group-hover:scale-110 transition-all duration-300" />
-                </Link>
-              </Button>
+              {user ? (
+                <Button
+                  size="lg"
+                  asChild
+                  className="group bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold px-10 rounded-2xl hover:shadow-2xl hover:shadow-rose-500/30 transition-all duration-300 border border-white/20"
+                >
+                  <Link to="/dashboard">
+                    Go to Dashboard
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 group-hover:scale-110 transition-all duration-300" />
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  size="lg"
+                  asChild
+                  className="group bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold px-10 rounded-2xl hover:shadow-2xl hover:shadow-rose-500/30 transition-all duration-300 border border-white/20"
+                >
+                  <Link to="/signup">
+                    Get Started Free
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 group-hover:scale-110 transition-all duration-300" />
+                  </Link>
+                </Button>
+              )}
               <Button
                 size="lg"
                 asChild

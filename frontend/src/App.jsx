@@ -11,14 +11,13 @@ import MembersManagement from "./pages/MembersManagement";
 import InviteUser from "./pages/InviteUser";
 import WorkspaceSettings from './pages/WorkspaceSettings';
 
-
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
         <div className="h-screen overflow-y-auto overflow-x-hidden">
           <Routes>
-            {/* Public Routes */}
+            {/* Public Routes - these also need AuthContext but don't require authentication */}
             <Route path="/" element={<Landing />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/login" element={<Login />} />
