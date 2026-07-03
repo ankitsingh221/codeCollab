@@ -1,20 +1,27 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { fileApi } from '../api/fileApi';
 import { workspaceApi } from '../api/workspaceApi';
 import CreateFileDialog from '../components/CreateFileDialog';
 import FileTreeItem from '../components/FileTreeItem';
+import FileEditor from '../components/FileEditor';
+import LivePreview from '../components/LivePreview';
+import RunPanel from '../components/RunPanel';
+import { isPreviewLanguage, isExecutable } from '../utils/executableLanguages';
 import { Button } from '@/components/ui/button';
-import { fileApi } from '../api/fileApi';
 import {
   ArrowLeft,
   Users,
   Settings,
   Loader2,
-  FileCode2,
   Files,
+  Eye,
+  EyeOff,
+  Code2,
+  Terminal,
 } from 'lucide-react';
 
-const Workspace = () => {
+const WorkSpace = () => {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
 
@@ -22,16 +29,24 @@ const Workspace = () => {
   const [files, setFiles] = useState([]);
   const [activeFile, setActiveFile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showSidePanel, setShowSidePanel] = useState(true);
+  const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [wsRes, filesRes] = await Promise.all([
-        workspaceApi.getById(workspaceId),
-        fileApi.getAll(workspaceId),
-      ]);
+     const [wsRes, filesRes] = await Promise.all([
+  workspaceApi.getWorkspaceById(workspaceId),
+  fileApi.getAll(workspaceId),
+]);
       setWorkspace(wsRes.data.workspace);
-      setFiles(filesRes.data.files);
+
+      const fullFiles = await Promise.all(
+        filesRes.data.files.map((f) =>
+          fileApi.getById(workspaceId, f._id).then((r) => r.data.file)
+        )
+      );
+      setFiles(fullFiles);
     } catch (err) {
       console.error(err);
     } finally {
@@ -58,7 +73,21 @@ const Workspace = () => {
     if (activeFile?._id === fileId) setActiveFile(null);
   };
 
+  const handleContentSynced = useCallback((updatedFile) => {
+    setFiles((prev) => prev.map((f) => (f._id === updatedFile._id ? updatedFile : f)));
+    setActiveFile((prev) => (prev?._id === updatedFile._id ? updatedFile : prev));
+    setPreviewRefreshKey((k) => k + 1);
+  }, []);
+
   const isOwner = workspace?.myRole === 'owner';
+
+  const activeMode = !activeFile
+    ? null
+    : isPreviewLanguage(activeFile.language)
+    ? 'preview'
+    : isExecutable(activeFile.language)
+    ? 'run'
+    : null;
 
   if (loading) {
     return (
@@ -87,6 +116,23 @@ const Workspace = () => {
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          {activeMode && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSidePanel((s) => !s)}
+              className="text-white/50 hover:text-white hover:bg-white/10 rounded-lg h-8 text-xs"
+            >
+              {showSidePanel ? (
+                <EyeOff className="w-3.5 h-3.5 mr-1.5" />
+              ) : activeMode === 'preview' ? (
+                <Eye className="w-3.5 h-3.5 mr-1.5" />
+              ) : (
+                <Terminal className="w-3.5 h-3.5 mr-1.5" />
+              )}
+              {showSidePanel ? 'Hide' : activeMode === 'preview' ? 'Show Preview' : 'Show Output'}
+            </Button>
+          )}
           <Link to={`/workspace/${workspaceId}/members`}>
             <Button
               variant="ghost"
@@ -141,20 +187,38 @@ const Workspace = () => {
           </div>
         </aside>
 
-        {/* Editor area — placeholder until Phase 5 */}
-        <main className="flex-1 flex items-center justify-center bg-[#0b0b0b]">
+        {/* Editor + Preview/Run */}
+        <main className="flex-1 flex min-w-0">
           {activeFile ? (
-            <div className="text-center">
-              <FileCode2 className="w-10 h-10 text-white/20 mx-auto mb-3" />
-              <p className="text-white/50 text-sm">
-                Opened <span className="text-white font-medium">{activeFile.name}</span>
-              </p>
-              <p className="text-white/25 text-xs mt-1">Monaco Editor integration coming in Phase 5</p>
+            <div className={`min-w-0 ${showSidePanel && activeMode ? 'w-1/2' : 'w-full'}`}>
+              <FileEditor
+                workspaceId={workspaceId}
+                file={activeFile}
+                onContentSynced={handleContentSynced}
+              />
             </div>
           ) : (
-            <div className="text-center">
-              <Files className="w-10 h-10 text-white/10 mx-auto mb-3" />
-              <p className="text-white/30 text-sm">Select a file to start editing</p>
+            <div className="flex-1 flex items-center justify-center bg-[#0b0b0b]">
+              <div className="text-center">
+                <Code2 className="w-10 h-10 text-white/10 mx-auto mb-3" />
+                <p className="text-white/30 text-sm">Select a file to start editing</p>
+              </div>
+            </div>
+          )}
+
+          {showSidePanel && activeMode === 'preview' && activeFile && (
+            <div className="w-1/2 min-w-0">
+              <LivePreview
+                files={files}
+                refreshKey={previewRefreshKey}
+                onRefresh={() => setPreviewRefreshKey((k) => k + 1)}
+              />
+            </div>
+          )}
+
+          {showSidePanel && activeMode === 'run' && activeFile && (
+            <div className="w-1/2 min-w-0">
+              <RunPanel workspaceId={workspaceId} file={activeFile} />
             </div>
           )}
         </main>
@@ -163,4 +227,4 @@ const Workspace = () => {
   );
 };
 
-export default Workspace;
+export default WorkSpace;

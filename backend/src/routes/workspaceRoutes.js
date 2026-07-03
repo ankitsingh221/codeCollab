@@ -11,6 +11,7 @@ import {
 import memberRoutes from "./memberRoutes.js";
 import { workspaceInvitationRouter } from "./invitationRoutes.js";
 import fileRoutes from "./fileRoutes.js";
+import executionRoutes from "./executionRoutes.js";
 
 const router = express.Router();
 
@@ -26,5 +27,6 @@ router.delete("/:workspaceId", requireMembership, requireOwner, deleteWorkspace)
 router.use("/:workspaceId/members", memberRoutes);
 router.use("/:workspaceId/invitations", workspaceInvitationRouter);
 router.use("/:workspaceId/files", fileRoutes);
+router.use("/:workspaceId/execute", executionRoutes);
 
 export default router;

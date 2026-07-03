@@ -1,7 +1,9 @@
 import File from "../models/File.js";
-import { getLanguageFromFilename, DEFAULT_BOILERPLATE } from "../utils/languageMap.js";
+import {
+  getLanguageFromFilename,
+  DEFAULT_BOILERPLATE,
+} from "../utils/languageMap.js";
 
-// @route GET /api/workspaces/:workspaceId/files
 export const getFiles = async (req, res) => {
   try {
     const files = await File.find({ workspaceId: req.params.workspaceId })
@@ -16,7 +18,6 @@ export const getFiles = async (req, res) => {
   }
 };
 
-// @route GET /api/workspaces/:workspaceId/files/:fileId  (full content, for opening in editor)
 export const getFileById = async (req, res) => {
   try {
     const file = await File.findOne({
@@ -34,7 +35,6 @@ export const getFileById = async (req, res) => {
   }
 };
 
-// @route POST /api/workspaces/:workspaceId/files
 export const createFile = async (req, res) => {
   try {
     const { name } = req.body;
@@ -46,12 +46,16 @@ export const createFile = async (req, res) => {
 
     const trimmedName = name.trim();
     if (!/^[a-zA-Z0-9_\-. ]+\.[a-zA-Z0-9]+$/.test(trimmedName)) {
-      return res.status(400).json({ message: "File name must include a valid extension, e.g. index.html" });
+      return res.status(400).json({
+        message: "File name must include a valid extension, e.g. index.html",
+      });
     }
 
     const existing = await File.findOne({ workspaceId, name: trimmedName });
     if (existing) {
-      return res.status(409).json({ message: "A file with this name already exists" });
+      return res
+        .status(409)
+        .json({ message: "A file with this name already exists" });
     }
 
     const language = getLanguageFromFilename(trimmedName);
@@ -69,14 +73,15 @@ export const createFile = async (req, res) => {
     return res.status(201).json({ file: populated });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({ message: "A file with this name already exists" });
+      return res
+        .status(409)
+        .json({ message: "A file with this name already exists" });
     }
     console.error(err);
     return res.status(500).json({ message: "Server error creating file" });
   }
 };
 
-// @route PATCH /api/workspaces/:workspaceId/files/:fileId  (rename and/or save content)
 export const updateFile = async (req, res) => {
   try {
     const { workspaceId, fileId } = req.params;
@@ -90,11 +95,19 @@ export const updateFile = async (req, res) => {
     if (name !== undefined && name.trim() !== file.name) {
       const trimmedName = name.trim();
       if (!/^[a-zA-Z0-9_\-. ]+\.[a-zA-Z0-9]+$/.test(trimmedName)) {
-        return res.status(400).json({ message: "File name must include a valid extension" });
+        return res
+          .status(400)
+          .json({ message: "File name must include a valid extension" });
       }
-      const existing = await File.findOne({ workspaceId, name: trimmedName, _id: { $ne: fileId } });
+      const existing = await File.findOne({
+        workspaceId,
+        name: trimmedName,
+        _id: { $ne: fileId },
+      });
       if (existing) {
-        return res.status(409).json({ message: "A file with this name already exists" });
+        return res
+          .status(409)
+          .json({ message: "A file with this name already exists" });
       }
       file.name = trimmedName;
       file.language = getLanguageFromFilename(trimmedName);
@@ -109,14 +122,15 @@ export const updateFile = async (req, res) => {
     return res.status(200).json({ file: populated });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({ message: "A file with this name already exists" });
+      return res
+        .status(409)
+        .json({ message: "A file with this name already exists" });
     }
     console.error(err);
     return res.status(500).json({ message: "Server error updating file" });
   }
 };
 
-// @route DELETE /api/workspaces/:workspaceId/files/:fileId
 export const deleteFile = async (req, res) => {
   try {
     const { workspaceId, fileId } = req.params;

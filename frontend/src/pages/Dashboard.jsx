@@ -309,21 +309,6 @@ const Dashboard = () => {
         onClose={() => setShowCreateModal(false)}
         onWorkspaceCreated={handleWorkspaceCreated}
       />
-
-      {/* Footer */}
-      <footer className="relative max-w-7xl mx-auto px-4 sm:px-6 py-4 border-t border-white/5 mt-8">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-          <p className="text-xs text-white/30">
-            © 2026 CodeCollab. Built with <span className="text-rose-400">❤</span> for developers.
-          </p>
-          <div className="flex gap-6 text-xs">
-            <a href="#" className="text-white/30 hover:text-rose-400 transition-colors duration-300">Privacy</a>
-            <a href="#" className="text-white/30 hover:text-rose-400 transition-colors duration-300">Terms</a>
-            <a href="#" className="text-white/30 hover:text-rose-400 transition-colors duration-300">Support</a>
-          </div>
-        </div>
-      </footer>
-
       <style>{`
         @keyframes gradient {
           0% { background-position: 0% 50%; }

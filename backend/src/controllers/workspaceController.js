@@ -29,7 +29,7 @@ export const createWorkspace = async (req, res) => {
       });
     }
 
-    // Check if user already has a workspace with the same name
+  
     const existingWorkspace = await Workspace.findOne({
       name: name.trim(),
       ownerId: req.user._id,
@@ -204,7 +204,7 @@ export const getWorkspaceById = async (req, res) => {
   }
 };
 
-// Update workspace
+
 export const updateWorkspace = async (req, res) => {
   try {
     const { workspaceId } = req.params;
@@ -222,7 +222,7 @@ export const updateWorkspace = async (req, res) => {
       });
     }
 
-    // Check if another workspace with the same name exists
+
     if (name && name.trim()) {
       const existingWorkspace = await Workspace.findOne({
         name: name.trim(),
