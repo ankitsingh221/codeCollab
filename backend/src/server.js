@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import workspaceRoutes from './routes/workspaceRoutes.js';
 import userRoutes from './routes/userRoute.js';
+import { userInvitationRouter } from './routes/invitationRoutes.js';
+
 
 dotenv.config();
 
@@ -34,6 +36,7 @@ app.use(cookieParser());
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);  
 app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/invitations', userInvitationRouter);
 
 
 app.get('/health', (req, res) => {

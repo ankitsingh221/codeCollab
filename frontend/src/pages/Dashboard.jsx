@@ -18,6 +18,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
+import PendingInvitations from '../components/PendingInvitations';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -125,8 +126,9 @@ const Dashboard = () => {
           </div>
         </div>
       </nav>
-
+       
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 py-8">
+          <PendingInvitations onAccepted={fetchWorkspaces} />
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div>
