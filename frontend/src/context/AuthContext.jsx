@@ -13,11 +13,23 @@ export const AuthProvider = ({ children }) => {
       const { data } = await axios.post(
         `${import.meta.env.VITE_API_URL || "http://localhost:5000/api"}/auth/refresh`,
         {},
-        { withCredentials: true },
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
       );
-      localStorage.setItem("accessToken", data.accessToken);
-      setUser(data.user);
-    } catch {
+      if (data.accessToken) {
+        localStorage.setItem("accessToken", data.accessToken);
+        if (data.refreshToken)
+          localStorage.setItem("refreshToken", data.refreshToken);
+        setUser(data.user);
+      } else {
+        throw new Error("No access token received");
+      }
+    } catch (error) {
+      console.error("Auth bootstrap error:", error);
       setUser(null);
       localStorage.removeItem("accessToken");
     } finally {
@@ -26,10 +38,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    const initAuth = async () => {
-      await bootstrapAuth();
-    };
-    initAuth();
+    bootstrapAuth();
   }, []);
 
   const signup = async (name, email, password) => {
@@ -38,20 +47,38 @@ export const AuthProvider = ({ children }) => {
       email,
       password,
     });
-    localStorage.setItem("accessToken", data.accessToken);
+    if (data.accessToken) {
+      localStorage.setItem("accessToken", data.accessToken);
+    }
+    if (data.refreshToken) {
+      localStorage.setItem("refreshToken", data.refreshToken);
+    }
     setUser(data.user);
+    return data;
   };
 
   const login = async (email, password) => {
     const { data } = await axiosClient.post("/auth/login", { email, password });
-    localStorage.setItem("accessToken", data.accessToken);
+    if (data.accessToken) {
+      localStorage.setItem("accessToken", data.accessToken);
+    }
+    if (data.refreshToken) {
+      localStorage.setItem("refreshToken", data.refreshToken);
+    }
     setUser(data.user);
+    return data;
   };
 
   const logout = async () => {
-    await axiosClient.post("/auth/logout");
-    localStorage.removeItem("accessToken");
-    setUser(null);
+    try {
+      await axiosClient.post("/auth/logout");
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      setUser(null);
+    }
   };
 
   const updateUser = (updatedUser) => setUser(updatedUser);
@@ -63,7 +90,6 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
-
 };
 
 export const useAuth = () => useContext(AuthContext);

@@ -5,8 +5,7 @@ import Landing from "./pages/Landing";
 import Signup from "./pages/Signup";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
-
-const Dashboard = () => <div className="min-h-screen bg-slate-950 text-slate-100 p-8">Dashboard (Phase 2)</div>;
+import Dashboard from "./pages/Dashboard";
 
 function App() {
   return (
