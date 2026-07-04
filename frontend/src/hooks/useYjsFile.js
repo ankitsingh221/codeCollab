@@ -1,14 +1,24 @@
-import { useEffect, useRef, useState } from 'react';
-import * as Y from 'yjs';
-import * as awarenessProtocol from 'y-protocols/awareness';
-import { MonacoBinding } from 'y-monaco';
-import { connectSocket } from '../socket/socket';
+import { useEffect, useRef, useState } from "react";
+import * as Y from "yjs";
+import * as awarenessProtocol from "y-protocols/awareness";
+import { MonacoBinding } from "y-monaco";
+import { connectSocket } from "../socket/socket";
 
-const COLORS = ['#f43f5e', '#06b6d4', '#a855f7', '#f59e0b', '#22c55e', '#3b82f6', '#ec4899', '#14b8a6'];
+const COLORS = [
+  "#f43f5e",
+  "#06b6d4",
+  "#a855f7",
+  "#f59e0b",
+  "#22c55e",
+  "#3b82f6",
+  "#ec4899",
+  "#14b8a6",
+];
 const colorForUser = (id) => {
   const str = String(id);
   let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  for (let i = 0; i < str.length; i++)
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
   return COLORS[Math.abs(hash) % COLORS.length];
 };
 
@@ -29,54 +39,82 @@ export const useYjsFile = ({ file, user, editorInstance }) => {
     awarenessRef.current = awareness;
     setConnected(false);
 
-    awareness.setLocalStateField('user', {
-      name: user?.name || 'Anonymous',
-      color: colorForUser(user?.id || user?._id || 'anon'),
+    awareness.setLocalStateField("user", {
+      name: user?.name || "Anonymous",
+      color: colorForUser(user?.id || user?._id || "anon"),
     });
 
     const handleSync = ({ fileId, update }) => {
       if (fileId !== file._id) return;
-      Y.applyUpdate(doc, new Uint8Array(update), 'remote');
+      try {
+        console.debug(
+          `[useYjsFile] handleSync file=${fileId} bytes=${update?.length || 0}`,
+        );
+      } catch (e) {}
+      Y.applyUpdate(doc, new Uint8Array(update), "remote");
       setConnected(true);
     };
 
     const handleRemoteUpdate = ({ fileId, update }) => {
       if (fileId !== file._id) return;
-      Y.applyUpdate(doc, new Uint8Array(update), 'remote');
+      try {
+        console.debug(
+          `[useYjsFile] handleRemoteUpdate file=${fileId} bytes=${update?.length || 0}`,
+        );
+      } catch (e) {}
+      Y.applyUpdate(doc, new Uint8Array(update), "remote");
     };
 
     const handleRemoteAwareness = ({ fileId, update }) => {
       if (fileId !== file._id) return;
-      awarenessProtocol.applyAwarenessUpdate(awareness, new Uint8Array(update), 'remote');
+      awarenessProtocol.applyAwarenessUpdate(
+        awareness,
+        new Uint8Array(update),
+        "remote",
+      );
     };
 
     const handleLocalDocUpdate = (update, origin) => {
-      if (origin === 'remote') return;
-      socket.emit('file:update', { fileId: file._id, update: Array.from(update) });
+      if (origin === "remote") return;
+      try {
+        console.debug(
+          `[useYjsFile] local update file=${file._id} origin=${origin} bytes=${update?.length || 0}`,
+        );
+      } catch (e) {}
+      socket.emit("file:update", {
+        fileId: file._id,
+        update: Array.from(update),
+      });
     };
 
     const handleLocalAwarenessUpdate = ({ added, updated, removed }) => {
       const changed = [...added, ...updated, ...removed];
       if (changed.length === 0) return;
-      const update = awarenessProtocol.encodeAwarenessUpdate(awareness, changed);
-      socket.emit('file:awareness-update', { fileId: file._id, update: Array.from(update) });
+      const update = awarenessProtocol.encodeAwarenessUpdate(
+        awareness,
+        changed,
+      );
+      socket.emit("file:awareness-update", {
+        fileId: file._id,
+        update: Array.from(update),
+      });
     };
 
-    doc.on('update', handleLocalDocUpdate);
-    awareness.on('update', handleLocalAwarenessUpdate);
-    socket.on('file:sync', handleSync);
-    socket.on('file:update', handleRemoteUpdate);
-    socket.on('file:awareness', handleRemoteAwareness);
+    doc.on("update", handleLocalDocUpdate);
+    awareness.on("update", handleLocalAwarenessUpdate);
+    socket.on("file:sync", handleSync);
+    socket.on("file:update", handleRemoteUpdate);
+    socket.on("file:awareness", handleRemoteAwareness);
 
-    socket.emit('file:join', { fileId: file._id });
+    socket.emit("file:join", { fileId: file._id });
 
     return () => {
-      socket.emit('file:leave', { fileId: file._id });
-      socket.off('file:sync', handleSync);
-      socket.off('file:update', handleRemoteUpdate);
-      socket.off('file:awareness', handleRemoteAwareness);
-      doc.off('update', handleLocalDocUpdate);
-      awareness.off('update', handleLocalAwarenessUpdate);
+      socket.emit("file:leave", { fileId: file._id });
+      socket.off("file:sync", handleSync);
+      socket.off("file:update", handleRemoteUpdate);
+      socket.off("file:awareness", handleRemoteAwareness);
+      doc.off("update", handleLocalDocUpdate);
+      awareness.off("update", handleLocalAwarenessUpdate);
 
       bindingRef.current?.destroy();
       bindingRef.current = null;
@@ -92,12 +130,12 @@ export const useYjsFile = ({ file, user, editorInstance }) => {
     const model = editorInstance.getModel();
     if (!model) return;
 
-    const ytext = docRef.current.getText('monaco');
+    const ytext = docRef.current.getText("monaco");
     bindingRef.current = new MonacoBinding(
       ytext,
       model,
       new Set([editorInstance]),
-      awarenessRef.current
+      awarenessRef.current,
     );
 
     return () => {

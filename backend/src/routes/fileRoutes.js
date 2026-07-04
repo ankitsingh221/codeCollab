@@ -12,7 +12,7 @@ import {
 const router = express.Router({ mergeParams: true });
 
 router.use(protect);
-router.use(requireMembership); // both owner and editor can manage files
+router.use(requireMembership); 
 
 router.get("/", getFiles);
 router.post("/", createFile);

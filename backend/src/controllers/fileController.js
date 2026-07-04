@@ -1,5 +1,8 @@
 import File from "../models/File.js";
-import { getLanguageFromFilename, DEFAULT_BOILERPLATE } from "../utils/languageMap.js";
+import {
+  getLanguageFromFilename,
+  DEFAULT_BOILERPLATE,
+} from "../utils/languageMap.js";
 
 export const getFiles = async (req, res) => {
   try {
@@ -41,12 +44,16 @@ export const createFile = async (req, res) => {
 
     const trimmedName = name.trim();
     if (!/^[a-zA-Z0-9_\-. ]+\.[a-zA-Z0-9]+$/.test(trimmedName)) {
-      return res.status(400).json({ message: "File name must include a valid extension, e.g. index.html" });
+      return res.status(400).json({
+        message: "File name must include a valid extension, e.g. index.html",
+      });
     }
 
     const existing = await File.findOne({ workspaceId, name: trimmedName });
     if (existing) {
-      return res.status(409).json({ message: "A file with this name already exists" });
+      return res
+        .status(409)
+        .json({ message: "A file with this name already exists" });
     }
 
     const language = getLanguageFromFilename(trimmedName);
@@ -62,12 +69,17 @@ export const createFile = async (req, res) => {
 
     const populated = await file.populate("createdBy", "name");
 
-    req.app.get("io")?.to(`workspace:${workspaceId}`).emit("workspace:file-created", { file: populated });
+    req.app
+      .get("io")
+      ?.to(`workspace:${workspaceId}`)
+      .emit("workspace:file-created", { file: populated });
 
     return res.status(201).json({ file: populated });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({ message: "A file with this name already exists" });
+      return res
+        .status(409)
+        .json({ message: "A file with this name already exists" });
     }
     console.error(err);
     return res.status(500).json({ message: "Server error creating file" });
@@ -86,11 +98,19 @@ export const updateFile = async (req, res) => {
     if (name !== undefined && name.trim() !== file.name) {
       const trimmedName = name.trim();
       if (!/^[a-zA-Z0-9_\-. ]+\.[a-zA-Z0-9]+$/.test(trimmedName)) {
-        return res.status(400).json({ message: "File name must include a valid extension" });
+        return res
+          .status(400)
+          .json({ message: "File name must include a valid extension" });
       }
-      const existing = await File.findOne({ workspaceId, name: trimmedName, _id: { $ne: fileId } });
+      const existing = await File.findOne({
+        workspaceId,
+        name: trimmedName,
+        _id: { $ne: fileId },
+      });
       if (existing) {
-        return res.status(409).json({ message: "A file with this name already exists" });
+        return res
+          .status(409)
+          .json({ message: "A file with this name already exists" });
       }
       file.name = trimmedName;
       file.language = getLanguageFromFilename(trimmedName);
@@ -98,20 +118,39 @@ export const updateFile = async (req, res) => {
     }
 
     if (content !== undefined) {
-      file.content = content;
+      // Validate content type to avoid accidental object saves from formatters
+      if (typeof content !== "string") {
+        console.warn(
+          `Rejecting update: file content for ${fileId} is not a string (type=${typeof content})`,
+        );
+        return res.status(400).json({ message: "Invalid file content" });
+      }
+      // Normalize CRLF to LF to avoid line-shift issues between clients
+      const normalized = content.replace(/\r\n/g, "\n");
+      // Prevent accidental huge writes
+      const MAX_SIZE = 1024 * 1024; // 1MB
+      if (normalized.length > MAX_SIZE) {
+        return res.status(400).json({ message: "File content too large" });
+      }
+      file.content = normalized;
     }
 
     await file.save();
     const populated = await file.populate("createdBy", "name");
 
     if (renamed) {
-      req.app.get("io")?.to(`workspace:${workspaceId}`).emit("workspace:file-renamed", { file: populated });
+      req.app
+        .get("io")
+        ?.to(`workspace:${workspaceId}`)
+        .emit("workspace:file-renamed", { file: populated });
     }
 
     return res.status(200).json({ file: populated });
   } catch (err) {
     if (err.code === 11000) {
-      return res.status(409).json({ message: "A file with this name already exists" });
+      return res
+        .status(409)
+        .json({ message: "A file with this name already exists" });
     }
     console.error(err);
     return res.status(500).json({ message: "Server error updating file" });
@@ -124,7 +163,10 @@ export const deleteFile = async (req, res) => {
     const file = await File.findOneAndDelete({ _id: fileId, workspaceId });
     if (!file) return res.status(404).json({ message: "File not found" });
 
-    req.app.get("io")?.to(`workspace:${workspaceId}`).emit("workspace:file-deleted", { fileId });
+    req.app
+      .get("io")
+      ?.to(`workspace:${workspaceId}`)
+      .emit("workspace:file-deleted", { fileId });
 
     return res.status(200).json({ message: "File deleted", fileId });
   } catch (err) {
@@ -132,3 +174,4 @@ export const deleteFile = async (req, res) => {
     return res.status(500).json({ message: "Server error deleting file" });
   }
 };
+// server-side formatting endpoint removed

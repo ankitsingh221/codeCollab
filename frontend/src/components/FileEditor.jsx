@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
-import Editor from '@monaco-editor/react';
-import { useYjsFile } from '../hooks/useYjsFile';
-import { useAuth } from '../context/AuthContext';
-import { Loader2, Check, Users as UsersIcon } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+import Editor from "@monaco-editor/react";
+import { useYjsFile } from "../hooks/useYjsFile";
+import { useAuth } from "../context/AuthContext";
+import { Loader2, Check, Users as UsersIcon } from "lucide-react";
 
 const FileEditor = ({ file, onContentSynced }) => {
   const { user } = useAuth();
@@ -12,7 +12,6 @@ const FileEditor = ({ file, onContentSynced }) => {
 
   const { connected, awareness } = useYjsFile({ file, user, editorInstance });
 
-  // Debounced propagate latest content to parent (used by LivePreview / RunPanel)
   useEffect(() => {
     if (!editorInstance) return;
     const model = editorInstance.getModel();
@@ -46,13 +45,13 @@ const FileEditor = ({ file, onContentSynced }) => {
       setPresentUsers(states);
     };
     update();
-    awareness.on('change', update);
-    return () => awareness.off('change', update);
+    awareness.on("change", update);
+    return () => awareness.off("change", update);
   }, [awareness]);
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 h-9 border-b border-white/5 bg-white/[0.02] shrink-0">
+      <div className="flex items-center justify-between px-4 h-9 border-b border-white/5 bg-white/2 shrink-0">
         <span className="text-xs text-white/40 truncate">{file.name}</span>
         <div className="flex items-center gap-3">
           {presentUsers.length > 0 && (
@@ -73,6 +72,7 @@ const FileEditor = ({ file, onContentSynced }) => {
             </div>
           )}
           <ConnectionIndicator connected={connected} />
+          {/* Formatter button removed */}
         </div>
       </div>
 
@@ -88,7 +88,7 @@ const FileEditor = ({ file, onContentSynced }) => {
             scrollBeyondLastLine: false,
             padding: { top: 12 },
             automaticLayout: true,
-            wordWrap: 'on',
+            wordWrap: "on",
           }}
         />
       </div>

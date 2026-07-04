@@ -10,7 +10,10 @@ const sessions = new Map();
 const persist = async (fileId, doc) => {
   try {
     const ytext = doc.getText("monaco");
-    await File.findByIdAndUpdate(fileId, { content: ytext.toString() });
+    // Normalize line endings to LF before persisting to avoid CRLF/LF mismatches
+    const content = ytext.toString().replace(/\r\n/g, "\n");
+    console.debug(`[fileCollab] persist file=${fileId} size=${content.length}`);
+    await File.findByIdAndUpdate(fileId, { content });
   } catch (err) {
     console.error(`Failed to persist file ${fileId}:`, err.message);
   }
@@ -20,9 +23,11 @@ const scheduleSave = (fileId) => {
   const session = sessions.get(fileId);
   if (!session) return;
   if (session.saveTimeout) clearTimeout(session.saveTimeout);
-  session.saveTimeout = setTimeout(() => persist(fileId, session.doc), SAVE_DEBOUNCE_MS);
+  session.saveTimeout = setTimeout(
+    () => persist(fileId, session.doc),
+    SAVE_DEBOUNCE_MS,
+  );
 };
-
 
 const pendingSessions = new Map(); // fileId -> in-flight creation Promise, prevents race duplicates
 
@@ -36,7 +41,12 @@ export const getOrCreateSession = async (fileId) => {
 
     const doc = new Y.Doc();
     const ytext = doc.getText("monaco");
-    ytext.insert(0, file.content || "");
+    // Ensure stored content uses LF only so all clients receive the same base document
+    const initial = (file.content || "").replace(/\r\n/g, "\n");
+    ytext.insert(0, initial);
+    console.debug(
+      `[fileCollab] create session file=${fileId} initialSize=${initial.length}`,
+    );
 
     const awareness = new awarenessProtocol.Awareness(doc);
     awareness.setLocalState(null);
@@ -70,7 +80,11 @@ export const registerClient = (fileId, socketId) => {
   session.controlledIds.set(socketId, new Set());
 };
 
-export const trackAwarenessChange = (fileId, socketId, { added, updated, removed }) => {
+export const trackAwarenessChange = (
+  fileId,
+  socketId,
+  { added, updated, removed },
+) => {
   const session = sessions.get(fileId);
   if (!session) return;
   const controlled = session.controlledIds.get(socketId);
@@ -91,7 +105,11 @@ export const disconnectClient = async (fileId, socketId) => {
   if (controlled && controlled.size > 0) {
     // removing these states fires the 'update' listener below, which broadcasts
     // the removal so other clients drop this user's cursor immediately
-    awarenessProtocol.removeAwarenessStates(session.awareness, Array.from(controlled), "server");
+    awarenessProtocol.removeAwarenessStates(
+      session.awareness,
+      Array.from(controlled),
+      "server",
+    );
   }
 
   if (session.clients.size === 0) {
@@ -104,6 +122,11 @@ export const disconnectClient = async (fileId, socketId) => {
 export const applyDocUpdate = (fileId, update, originSocketId) => {
   const session = sessions.get(fileId);
   if (!session) return;
+  try {
+    console.debug(
+      `[fileCollab] applyDocUpdate file=${fileId} origin=${originSocketId} bytes=${update.byteLength || update.length}`,
+    );
+  } catch (e) {}
   Y.applyUpdate(session.doc, update, originSocketId);
   scheduleSave(fileId);
 };
@@ -111,5 +134,9 @@ export const applyDocUpdate = (fileId, update, originSocketId) => {
 export const applyAwarenessUpdate = (fileId, update, originSocketId) => {
   const session = sessions.get(fileId);
   if (!session) return;
-  awarenessProtocol.applyAwarenessUpdate(session.awareness, update, originSocketId);
+  awarenessProtocol.applyAwarenessUpdate(
+    session.awareness,
+    update,
+    originSocketId,
+  );
 };

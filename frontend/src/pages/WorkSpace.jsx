@@ -1,17 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { fileApi } from '../api/fileApi';
-import { workspaceApi } from '../api/workspaceApi';
-import CreateFileDialog from '../components/CreateFileDialog';
-import FileTreeItem from '../components/FileTreeItem';
-import FileEditor from '../components/FileEditor';
-import LivePreview from '../components/LivePreview';
-import RunPanel from '../components/RunPanel';
-import { isPreviewLanguage, isExecutable } from '../utils/executableLanguages';
-import { Button } from '@/components/ui/button';
-import { connectSocket, disconnectSocket, getSocket } from '../socket/socket';
-import { useWorkspacePresence } from '../hooks/useWorkspacePresence';
-import OnlineUsers from '../components/OnlineUsers';
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { fileApi } from "../api/fileApi";
+import { workspaceApi } from "../api/workspaceApi";
+import CreateFileDialog from "../components/CreateFileDialog";
+import FileTreeItem from "../components/FileTreeItem";
+import FileEditor from "../components/FileEditor";
+import LivePreview from "../components/LivePreview";
+import RunPanel from "../components/RunPanel";
+import { isPreviewLanguage, isExecutable } from "../utils/executableLanguages";
+import { Button } from "@/components/ui/button";
+import { connectSocket, disconnectSocket, getSocket } from "../socket/socket";
+import { useWorkspacePresence } from "../hooks/useWorkspacePresence";
+import OnlineUsers from "../components/OnlineUsers";
 import {
   ArrowLeft,
   Users,
@@ -31,11 +31,22 @@ import {
   Play,
   Square,
   GripVertical,
-} from 'lucide-react';
+} from "lucide-react";
 
 const WorkSpace = () => {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
+
+  // Debug: log component types to detect invalid element types
+  try {
+    console.debug("debug: types ->", {
+      Button: typeof Button,
+      FileEditor: typeof FileEditor,
+      LivePreview: typeof LivePreview,
+      RunPanel: typeof RunPanel,
+      OnlineUsers: typeof OnlineUsers,
+    });
+  } catch (e) {}
 
   const [workspace, setWorkspace] = useState(null);
   const [files, setFiles] = useState([]);
@@ -48,6 +59,7 @@ const WorkSpace = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [isTablet, setIsTablet] = useState(window.innerWidth < 1280);
   const [terminalHeight, setTerminalHeight] = useState(300);
+  const activeFileRef = useRef(activeFile);
 
   useEffect(() => {
     const handleResize = () => {
@@ -64,8 +76,8 @@ const WorkSpace = () => {
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [sidebarCollapsed]);
 
   const fetchData = async () => {
@@ -79,8 +91,8 @@ const WorkSpace = () => {
 
       const fullFiles = await Promise.all(
         filesRes.data.files.map((f) =>
-          fileApi.getById(workspaceId, f._id).then((r) => r.data.file)
-        )
+          fileApi.getById(workspaceId, f._id).then((r) => r.data.file),
+        ),
       );
       setFiles(fullFiles);
     } catch (err) {
@@ -94,60 +106,124 @@ const WorkSpace = () => {
     fetchData();
   }, [workspaceId]);
 
+  useEffect(() => {
+    activeFileRef.current = activeFile;
+  }, [activeFile]);
+
   const onlineUsers = useWorkspacePresence(workspaceId);
 
   useEffect(() => {
     connectSocket();
     const socket = getSocket();
 
-    const handleCreated = ({ file }) => {
-      if (!file || !file._id || !file.name) {
-        console.warn('Received malformed file creation event:', file);
-        return;
-      }
-
-      setFiles((prev) => {
-        const safePrev = prev.filter(Boolean);
-        const exists = safePrev.some((f) => f?._id === file._id || f?.name === file.name);
-        if (exists) {
-          return safePrev.map((f) => 
-            f._id === file._id || f.name === file.name ? file : f
-          );
+    const handleCreated = (payload) => {
+      try {
+        const file = payload && payload.file ? payload.file : payload;
+        if (!file || (!file._id && !file.id)) {
+          console.warn("Received malformed file creation event:", payload);
+          return;
         }
-        return [...safePrev, file].sort((a, b) => a.name.localeCompare(b.name));
-      });
+
+        const safeFile = {
+          ...file,
+          _id: String(file._id ?? file.id),
+          name:
+            typeof file.name === "string" ? file.name : String(file.name ?? ""),
+        };
+
+        setFiles((prev) => {
+          try {
+            const safePrev = (prev || []).filter(Boolean);
+            const exists = safePrev.some(
+              (f) =>
+                String(f?._id) === safeFile._id ||
+                String(f?.name) === safeFile.name,
+            );
+            if (exists) {
+              return safePrev.map((f) =>
+                String(f?._id) === safeFile._id ||
+                String(f?.name) === safeFile.name
+                  ? safeFile
+                  : f,
+              );
+            }
+            const merged = [...safePrev, safeFile];
+            return merged.sort((a, b) =>
+              String(a.name || "").localeCompare(String(b.name || "")),
+            );
+          } catch (inner) {
+            console.error(
+              "Error updating files list on create:",
+              inner,
+              payload,
+            );
+            return prev;
+          }
+        });
+      } catch (err) {
+        console.error("workspace:file-created handler error:", err, payload);
+      }
     };
 
     const handleRenamed = (updated) => {
       if (!updated?._id) return;
-      setFiles((prev) => prev.filter(Boolean).map((f) => (f._id === updated._id ? updated : f)));
-      if (activeFile?._id === updated._id) setActiveFile(updated);
+      setFiles((prev) =>
+        prev.filter(Boolean).map((f) => (f._id === updated._id ? updated : f)),
+      );
+      if (activeFileRef.current?._id === updated._id) setActiveFile(updated);
     };
 
     const handleDeleted = (fileId) => {
       if (!fileId) return;
       setFiles((prev) => prev.filter(Boolean).filter((f) => f._id !== fileId));
-      if (activeFile?._id === fileId) setActiveFile(null);
+      if (activeFileRef.current?._id === fileId) setActiveFile(null);
     };
 
-    socket.on('workspace:file-created', handleCreated);
-    socket.on('workspace:file-renamed', handleRenamed);
-    socket.on('workspace:file-deleted', handleDeleted);
+    socket.on("workspace:file-created", handleCreated);
+    socket.on("workspace:file-renamed", handleRenamed);
+    socket.on("workspace:file-deleted", handleDeleted);
 
     return () => {
-      socket.off('workspace:file-created', handleCreated);
-      socket.off('workspace:file-renamed', handleRenamed);
-      socket.off('workspace:file-deleted', handleDeleted);
-      disconnectSocket();
+      socket.off("workspace:file-created", handleCreated);
+      socket.off("workspace:file-renamed", handleRenamed);
+      socket.off("workspace:file-deleted", handleDeleted);
     };
-  }, [workspaceId, activeFile]);
+  }, [workspaceId]);
 
-  const handleFileCreated = ({ file }) => {
-    setFiles((prev) => {
-      const exists = prev.some((f) => f.name === file.name);
-      if (exists) return prev;
-      return [...prev, file].sort((a, b) => a.name.localeCompare(b.name));
-    });
+  const handleFileCreated = (payload) => {
+    try {
+      const file = payload && payload.file ? payload.file : payload;
+      if (!file || (!file._id && !file.id)) return;
+
+      const safeFile = {
+        ...file,
+        _id: String(file._id ?? file.id),
+        name:
+          typeof file.name === "string" ? file.name : String(file.name ?? ""),
+      };
+
+      setFiles((prev) => {
+        const safePrev = (prev || []).filter(Boolean);
+        const exists = safePrev.some(
+          (f) =>
+            String(f?._id) === safeFile._id ||
+            String(f?.name) === safeFile.name,
+        );
+        if (exists) {
+          return safePrev.map((f) =>
+            String(f?._id) === safeFile._id || String(f?.name) === safeFile.name
+              ? safeFile
+              : f,
+          );
+        }
+        const merged = [...safePrev, safeFile];
+        return merged.sort((a, b) =>
+          String(a.name || "").localeCompare(String(b.name || "")),
+        );
+      });
+    } catch (err) {
+      console.error("handleFileCreated error:", err, payload);
+    }
   };
 
   const handleFileRenamed = (updated) => {
@@ -161,20 +237,30 @@ const WorkSpace = () => {
   };
 
   const handleContentSynced = useCallback((updatedFile) => {
-    setFiles((prev) => prev.map((f) => (f._id === updatedFile._id ? updatedFile : f)));
-    setActiveFile((prev) => (prev?._id === updatedFile._id ? updatedFile : prev));
+    setFiles((prev) =>
+      prev.map((f) => (f._id === updatedFile._id ? updatedFile : f)),
+    );
+    setActiveFile((prev) =>
+      prev?._id === updatedFile._id ? updatedFile : prev,
+    );
     setPreviewRefreshKey((k) => k + 1);
   }, []);
 
-  const isOwner = workspace?.myRole === 'owner';
+  useEffect(() => {
+    return () => {
+      disconnectSocket();
+    };
+  }, []);
+
+  const isOwner = workspace?.myRole === "owner";
 
   const activeMode = !activeFile
     ? null
     : isPreviewLanguage(activeFile.language)
-    ? 'preview'
-    : isExecutable(activeFile.language)
-    ? 'run'
-    : null;
+      ? "preview"
+      : isExecutable(activeFile.language)
+        ? "run"
+        : null;
 
   const togglePreviewFullscreen = () => {
     setIsPreviewFullscreen(!isPreviewFullscreen);
@@ -198,18 +284,20 @@ const WorkSpace = () => {
   return (
     <div className="h-screen flex flex-col bg-[#0a0a0a] text-white overflow-hidden">
       {/* Top bar */}
-      <div className="flex items-center justify-between px-4 h-14 border-b border-white/10 bg-gradient-to-r from-[#0a0a0a] to-[#141414] backdrop-blur-xl shrink-0 z-10">
+      <div className="flex items-center justify-between px-4 h-14 border-b border-white/10 bg-linear-to-r from-[#0a0a0a] to-[#141414] backdrop-blur-xl shrink-0 z-10">
         <div className="flex items-center gap-3 min-w-0">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate("/dashboard")}
             className="text-white/40 hover:text-white hover:bg-white/10 rounded-lg h-8 w-8 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold text-white/90 truncate">{workspace?.name}</h1>
+            <h1 className="text-sm font-semibold text-white/90 truncate">
+              {workspace?.name}
+            </h1>
           </div>
           <OnlineUsers users={onlineUsers} />
         </div>
@@ -217,7 +305,7 @@ const WorkSpace = () => {
         <div className="flex items-center gap-2 shrink-0">
           {activeMode && (
             <>
-              {activeMode === 'preview' && (
+              {activeMode === "preview" && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -229,7 +317,7 @@ const WorkSpace = () => {
                   ) : (
                     <Maximize2 className="w-3.5 h-3.5 mr-1.5" />
                   )}
-                  {isPreviewFullscreen ? 'Exit Full' : 'Full Preview'}
+                  {isPreviewFullscreen ? "Exit Full" : "Full Preview"}
                 </Button>
               )}
               <Button
@@ -240,12 +328,16 @@ const WorkSpace = () => {
               >
                 {showSidePanel ? (
                   <EyeOff className="w-3.5 h-3.5 mr-1.5" />
-                ) : activeMode === 'preview' ? (
+                ) : activeMode === "preview" ? (
                   <Eye className="w-3.5 h-3.5 mr-1.5" />
                 ) : (
                   <Terminal className="w-3.5 h-3.5 mr-1.5" />
                 )}
-                {showSidePanel ? 'Hide' : activeMode === 'preview' ? 'Show Preview' : 'Show Output'}
+                {showSidePanel
+                  ? "Hide"
+                  : activeMode === "preview"
+                    ? "Show Preview"
+                    : "Show Output"}
               </Button>
             </>
           )}
@@ -278,8 +370,12 @@ const WorkSpace = () => {
       <div className="flex flex-1 min-h-0">
         {/* Sidebar */}
         <aside
-          className={`shrink-0 border-r border-white/10 bg-gradient-to-b from-[#0a0a0a] to-[#0f0f0f] flex flex-col transition-all duration-300 ${
-            isPreviewFullscreen ? 'w-0 overflow-hidden border-0' : sidebarCollapsed ? 'w-11' : 'w-64'
+          className={`shrink-0 border-r border-white/10 bg-linear-to-b from-[#0a0a0a] to-[#0f0f0f] flex flex-col transition-all duration-300 ${
+            isPreviewFullscreen
+              ? "w-0 overflow-hidden border-0"
+              : sidebarCollapsed
+                ? "w-11"
+                : "w-64"
           }`}
         >
           {!isPreviewFullscreen && (
@@ -296,11 +392,17 @@ const WorkSpace = () => {
                 <button
                   onClick={() => setSidebarCollapsed((c) => !c)}
                   className={`p-1.5 rounded-lg hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors ${
-                    sidebarCollapsed ? 'mx-auto' : ''
+                    sidebarCollapsed ? "mx-auto" : ""
                   }`}
-                  title={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                  title={
+                    sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
+                  }
                 >
-                  {sidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+                  {sidebarCollapsed ? (
+                    <PanelLeftOpen className="w-4 h-4" />
+                  ) : (
+                    <PanelLeftClose className="w-4 h-4" />
+                  )}
                 </button>
               </div>
 
@@ -321,7 +423,10 @@ const WorkSpace = () => {
                   </div>
 
                   <div className="p-2 border-t border-white/5">
-                    <CreateFileDialog workspaceId={workspaceId} onCreated={handleFileCreated} />
+                    <CreateFileDialog
+                      workspaceId={workspaceId}
+                      onCreated={handleFileCreated}
+                    />
                   </div>
                 </>
               )}
@@ -336,12 +441,17 @@ const WorkSpace = () => {
             {/* Editor Area */}
             <div className="flex-1 min-h-0 relative">
               {activeFile ? (
-                <FileEditor file={activeFile} onContentSynced={handleContentSynced} />
+                <FileEditor
+                  file={activeFile}
+                  onContentSynced={handleContentSynced}
+                />
               ) : (
                 <div className="flex-1 flex items-center justify-center bg-[#0b0b0b]">
                   <div className="text-center">
                     <Code2 className="w-10 h-10 text-white/10 mx-auto mb-3" />
-                    <p className="text-white/30 text-sm">Select a file to start editing</p>
+                    <p className="text-white/30 text-sm">
+                      Select a file to start editing
+                    </p>
                   </div>
                 </div>
               )}
@@ -349,31 +459,38 @@ const WorkSpace = () => {
 
             {/* Bottom Panel - Terminal/Preview */}
             {activeFile && showSidePanel && activeMode && (
-              <div 
+              <div
                 className="border-t border-white/10 bg-[#0a0a0a] flex flex-col"
-                style={{ height: `${Math.min(terminalHeight, window.innerHeight * 0.6)}px` }}
+                style={{
+                  height: `${Math.min(terminalHeight, window.innerHeight * 0.6)}px`,
+                }}
               >
-                <div 
+                <div
                   className="flex items-center justify-between px-3 py-2 bg-white/5 cursor-row-resize"
                   onMouseDown={(e) => {
                     const startY = e.clientY;
                     const startHeight = terminalHeight;
                     const onMouseMove = (e) => {
                       const newHeight = startHeight - (e.clientY - startY);
-                      setTerminalHeight(Math.max(150, Math.min(newHeight, window.innerHeight * 0.7)));
+                      setTerminalHeight(
+                        Math.max(
+                          150,
+                          Math.min(newHeight, window.innerHeight * 0.7),
+                        ),
+                      );
                     };
                     const onMouseUp = () => {
-                      document.removeEventListener('mousemove', onMouseMove);
-                      document.removeEventListener('mouseup', onMouseUp);
+                      document.removeEventListener("mousemove", onMouseMove);
+                      document.removeEventListener("mouseup", onMouseUp);
                     };
-                    document.addEventListener('mousemove', onMouseMove);
-                    document.addEventListener('mouseup', onMouseUp);
+                    document.addEventListener("mousemove", onMouseMove);
+                    document.addEventListener("mouseup", onMouseUp);
                   }}
                 >
                   <div className="flex items-center gap-2">
                     <GripVertical className="w-3.5 h-3.5 text-white/30" />
                     <span className="text-xs font-medium text-white/40 uppercase tracking-wide">
-                      {activeMode === 'preview' ? 'Preview' : 'Terminal Output'}
+                      {activeMode === "preview" ? "Preview" : "Terminal Output"}
                     </span>
                   </div>
                   <div className="flex items-center gap-1">
@@ -388,13 +505,13 @@ const WorkSpace = () => {
                   </div>
                 </div>
                 <div className="flex-1 min-h-0">
-                  {activeMode === 'preview' ? (
+                  {activeMode === "preview" ? (
                     <LivePreview
                       files={files}
                       refreshKey={previewRefreshKey}
                       onRefresh={() => setPreviewRefreshKey((k) => k + 1)}
                     />
-                  ) : activeMode === 'run' ? (
+                  ) : activeMode === "run" ? (
                     <RunPanel workspaceId={workspaceId} file={activeFile} />
                   ) : null}
                 </div>
@@ -407,48 +524,63 @@ const WorkSpace = () => {
             {activeFile ? (
               <>
                 {/* Editor */}
-                <div className={`min-w-0 transition-all duration-300 ${isPreviewFullscreen ? 'w-0 overflow-hidden' : (showSidePanel && activeMode ? 'w-1/2' : 'w-full')}`}>
-                  <FileEditor file={activeFile} onContentSynced={handleContentSynced} />
+                <div
+                  className={`min-w-0 transition-all duration-300 ${isPreviewFullscreen ? "w-0 overflow-hidden" : showSidePanel && activeMode ? "w-1/2" : "w-full"}`}
+                >
+                  <FileEditor
+                    file={activeFile}
+                    onContentSynced={handleContentSynced}
+                  />
                 </div>
 
                 {/* Preview/Run Panel */}
                 {showSidePanel && activeMode && (
-                  <div className={`transition-all duration-300 ${isPreviewFullscreen ? 'w-full' : (activeMode ? 'w-1/2' : 'w-0')} min-w-0`}>
-                    {activeMode === 'preview' ? (
+                  <div
+                    className={`transition-all duration-300 ${isPreviewFullscreen ? "w-full" : activeMode ? "w-1/2" : "w-0"} min-w-0`}
+                  >
+                    {activeMode === "preview" ? (
                       <LivePreview
                         files={files}
                         refreshKey={previewRefreshKey}
                         onRefresh={() => setPreviewRefreshKey((k) => k + 1)}
                       />
-                    ) : activeMode === 'run' ? (
+                    ) : activeMode === "run" ? (
                       <RunPanel workspaceId={workspaceId} file={activeFile} />
                     ) : null}
                   </div>
                 )}
 
                 {/* Sliding handle for side panel */}
-                {isMobile && showSidePanel && activeMode && !isPreviewFullscreen && (
-                  <button
-                    onClick={() => setShowSidePanel(false)}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-l-lg p-1 z-10 transition-all"
-                  >
-                    <ChevronRight className="w-4 h-4 text-white/50" />
-                  </button>
-                )}
-                {isMobile && !showSidePanel && activeMode && !isPreviewFullscreen && (
-                  <button
-                    onClick={() => setShowSidePanel(true)}
-                    className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-l-lg p-1 z-10 transition-all"
-                  >
-                    <ChevronLeft className="w-4 h-4 text-white/50" />
-                  </button>
-                )}
+                {isMobile &&
+                  showSidePanel &&
+                  activeMode &&
+                  !isPreviewFullscreen && (
+                    <button
+                      onClick={() => setShowSidePanel(false)}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-l-lg p-1 z-10 transition-all"
+                    >
+                      <ChevronRight className="w-4 h-4 text-white/50" />
+                    </button>
+                  )}
+                {isMobile &&
+                  !showSidePanel &&
+                  activeMode &&
+                  !isPreviewFullscreen && (
+                    <button
+                      onClick={() => setShowSidePanel(true)}
+                      className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-l-lg p-1 z-10 transition-all"
+                    >
+                      <ChevronLeft className="w-4 h-4 text-white/50" />
+                    </button>
+                  )}
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center bg-[#0b0b0b]">
                 <div className="text-center">
                   <Code2 className="w-10 h-10 text-white/10 mx-auto mb-3" />
-                  <p className="text-white/30 text-sm">Select a file to start editing</p>
+                  <p className="text-white/30 text-sm">
+                    Select a file to start editing
+                  </p>
                 </div>
               </div>
             )}
