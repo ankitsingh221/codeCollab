@@ -4,6 +4,8 @@ import { invitationApi } from '../api/invitationApi';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+
 import {
   Select,
   SelectTrigger,
@@ -32,10 +34,12 @@ const InviteUser = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+
   const fetchPending = async () => {
     try {
       const response = await invitationApi.getForWorkspace(workspaceId);
       setPending(response.data.invitations || []);
+      
     } catch (err) {
       console.error(err);
     } finally {

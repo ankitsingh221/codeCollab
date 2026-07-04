@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { memberApi } from '../api/memberApi';
 import { getId } from '../utils/getId';
+import { useToast } from '../context/ToastContext';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -11,12 +12,13 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import { ArrowLeft, UserPlus, Trash2, Loader2, Users } from 'lucide-react';
+import { ArrowLeft, UserPlus, Trash2, Loader2, Users, Crown } from 'lucide-react';
 
 const MembersManagement = () => {
   const { workspaceId } = useParams();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,8 +32,19 @@ const MembersManagement = () => {
     try {
       const response = await memberApi.getAll(workspaceId);
       setMembers(response.data.members || []);
+      
+      toast({
+      title: "Members Loaded",
+      description: `${response.data.members?.length || 0} members in workspace`,
+      variant: "success"
+    });
     } catch (err) {
       console.error(err);
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || "Failed to load members",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -45,9 +58,21 @@ const MembersManagement = () => {
     setUpdatingId(memberId);
     try {
       await memberApi.updateRole(workspaceId, memberId, role);
-      fetchMembers();
+      await fetchMembers();
+      
+      const member = members.find(m => getId(m) === memberId);
+      toast({
+        title: "Role Updated",
+        description: `${member?.userId?.name || 'Member'} is now ${role === 'owner' ? 'Owner' : 'Editor'}`,
+        variant: "success"
+      });
     } catch (err) {
       console.error(err);
+      toast({
+        title: "Update Failed",
+        description: err.response?.data?.message || "Failed to update role",
+        variant: "destructive"
+      });
     } finally {
       setUpdatingId(null);
     }
@@ -55,12 +80,24 @@ const MembersManagement = () => {
 
   const handleRemove = async (memberId, name) => {
     if (!confirm(`Remove ${name} from this workspace?`)) return;
+    
     setUpdatingId(memberId);
     try {
       await memberApi.remove(workspaceId, memberId);
       setMembers((prev) => prev.filter((m) => getId(m) !== memberId));
+      
+      toast({
+        title: "Member Removed",
+        description: `${name} has been removed from the workspace`,
+        variant: "success"
+      });
     } catch (err) {
       console.error(err);
+      toast({
+        title: "Remove Failed",
+        description: err.response?.data?.message || "Failed to remove member",
+        variant: "destructive"
+      });
     } finally {
       setUpdatingId(null);
     }
@@ -71,15 +108,22 @@ const MembersManagement = () => {
       <div className="absolute top-[-300px] right-[-200px] w-[600px] h-[600px] rounded-full bg-rose-500/10 blur-3xl animate-pulse"></div>
       <div className="absolute bottom-[-300px] left-[-200px] w-[600px] h-[600px] rounded-full bg-cyan-500/10 blur-3xl animate-pulse delay-1000"></div>
 
+      <div
+        className="absolute inset-0 pointer-events-none opacity-20"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cdefs%3E%3Cpattern id='grid' width='60' height='60' patternUnits='userSpaceOnUse'%3E%3Cpath d='M60 0 L0 0 0 60' fill='none' stroke='rgba(255,255,255,0.05)' stroke-width='0.5'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23grid)'/%3E%3C/svg%3E")`,
+        }}
+      />
+
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6 py-10">
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => navigate('/dashboard')}
+          onClick={() => navigate(`/workspace/${workspaceId}`)}
           className="mb-6 text-white/40 hover:text-white hover:bg-white/5 rounded-xl transition-all duration-300"
         >
           <ArrowLeft className="w-4 h-4 mr-1" />
-          Back to Dashboard
+          Back to Workspace
         </Button>
 
         <div className="relative bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-6 overflow-hidden">
@@ -92,7 +136,9 @@ const MembersManagement = () => {
               </div>
               <div>
                 <h1 className="text-lg font-semibold text-white/90">Members</h1>
-                <p className="text-xs text-white/40">Manage who has access to this workspace</p>
+                <p className="text-xs text-white/40">
+                  {members.length} {members.length === 1 ? 'member' : 'members'} in this workspace
+                </p>
               </div>
             </div>
             {isOwner && (
@@ -113,6 +159,10 @@ const MembersManagement = () => {
               <div className="flex justify-center py-10">
                 <Loader2 className="w-6 h-6 animate-spin text-white/30" />
               </div>
+            ) : members.length === 0 ? (
+              <div className="text-center py-10">
+                <p className="text-white/30 text-sm">No members in this workspace yet</p>
+              </div>
             ) : (
               <div className="space-y-3">
                 {members.map((member) => {
@@ -124,13 +174,16 @@ const MembersManagement = () => {
                       className="flex items-center justify-between p-3 rounded-xl bg-white/5 border border-white/5 hover:border-white/10 transition-all duration-300"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-rose-400/30 to-cyan-400/30 flex items-center justify-center text-xs font-medium text-white/70">
+                        <div className="w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-rose-400/30 to-cyan-400/30 flex items-center justify-center text-xs font-medium text-white/70 border border-white/10">
                           {member.userId?.name?.charAt(0).toUpperCase() || 'U'}
                         </div>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-white/80 truncate">
                             {member.userId?.name}{' '}
                             {isSelf && <span className="text-white/30 font-normal">(You)</span>}
+                            {member.role === 'owner' && (
+                              <Crown className="w-3.5 h-3.5 inline ml-1 text-rose-400" />
+                            )}
                           </p>
                           <p className="text-xs text-white/30 truncate">{member.userId?.email}</p>
                         </div>

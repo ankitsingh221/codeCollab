@@ -10,11 +10,16 @@ import WorkSpace from "./pages/WorkSpace";
 import MembersManagement from "./pages/MembersManagement";
 import InviteUser from "./pages/InviteUser";
 import WorkspaceSettings from './pages/WorkspaceSettings';
+import { ToastProvider } from "./context/ToastContext";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 function App() {
   return (
+    <ErrorBoundary>
     <BrowserRouter>
       <AuthProvider>
+        <ToastProvider>
+
         <div className="h-screen overflow-y-auto overflow-x-hidden">
           <Routes>
             {/* Public Routes - these also need AuthContext but don't require authentication */}
@@ -33,8 +38,10 @@ function App() {
             </Route>
           </Routes>
         </div>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

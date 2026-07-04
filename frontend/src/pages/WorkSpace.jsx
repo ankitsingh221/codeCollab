@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { connectSocket, disconnectSocket, getSocket } from "../socket/socket";
 import { useWorkspacePresence } from "../hooks/useWorkspacePresence";
 import OnlineUsers from "../components/OnlineUsers";
+import { useToast } from "../context/ToastContext";
 import {
   ArrowLeft,
   Users,
@@ -28,25 +29,13 @@ import {
   Minimize2,
   ChevronLeft,
   ChevronRight,
-  Play,
-  Square,
   GripVertical,
 } from "lucide-react";
 
 const WorkSpace = () => {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
-
-  // Debug: log component types to detect invalid element types
-  try {
-    console.debug("debug: types ->", {
-      Button: typeof Button,
-      FileEditor: typeof FileEditor,
-      LivePreview: typeof LivePreview,
-      RunPanel: typeof RunPanel,
-      OnlineUsers: typeof OnlineUsers,
-    });
-  } catch (e) {}
+  const { toast } = useToast();
 
   const [workspace, setWorkspace] = useState(null);
   const [files, setFiles] = useState([]);
@@ -60,6 +49,7 @@ const WorkSpace = () => {
   const [isTablet, setIsTablet] = useState(window.innerWidth < 1280);
   const [terminalHeight, setTerminalHeight] = useState(300);
   const activeFileRef = useRef(activeFile);
+  const isCreatingRef = useRef(false); // Track if we're currently creating a file
 
   useEffect(() => {
     const handleResize = () => {
@@ -95,8 +85,21 @@ const WorkSpace = () => {
         ),
       );
       setFiles(fullFiles);
+       toast({
+      title: "Workspace Loaded",
+      description: `"${wsRes.data.workspace.name}" ready to code`,
+      variant: "success"
+    });
     } catch (err) {
       console.error(err);
+      toast({
+        title: "Error",
+        description: err.response?.data?.message || "Failed to load workspace data",
+        variant: "destructive"
+      });
+      if (err.response?.status === 403 || err.response?.status === 404) {
+        navigate('/dashboard');
+      }
     } finally {
       setLoading(false);
     }
@@ -118,6 +121,12 @@ const WorkSpace = () => {
 
     const handleCreated = (payload) => {
       try {
+        // Skip if we're the one who created the file (handled locally)
+        if (isCreatingRef.current) {
+          console.log('Skipping socket event - we created this file');
+          return;
+        }
+
         const file = payload && payload.file ? payload.file : payload;
         if (!file || (!file._id && !file.id)) {
           console.warn("Received malformed file creation event:", payload);
@@ -134,17 +143,13 @@ const WorkSpace = () => {
         setFiles((prev) => {
           try {
             const safePrev = (prev || []).filter(Boolean);
+            // Check if file already exists
             const exists = safePrev.some(
-              (f) =>
-                String(f?._id) === safeFile._id ||
-                String(f?.name) === safeFile.name,
+              (f) => String(f?._id) === safeFile._id
             );
             if (exists) {
               return safePrev.map((f) =>
-                String(f?._id) === safeFile._id ||
-                String(f?.name) === safeFile.name
-                  ? safeFile
-                  : f,
+                String(f?._id) === safeFile._id ? safeFile : f,
               );
             }
             const merged = [...safePrev, safeFile];
@@ -160,6 +165,12 @@ const WorkSpace = () => {
             return prev;
           }
         });
+
+        toast({
+          title: "New File",
+          description: `${safeFile.name} was created by someone`,
+          variant: "success"
+        });
       } catch (err) {
         console.error("workspace:file-created handler error:", err, payload);
       }
@@ -167,16 +178,31 @@ const WorkSpace = () => {
 
     const handleRenamed = (updated) => {
       if (!updated?._id) return;
+      
+      const oldName = files.find(f => f._id === updated._id)?.name || 'File';
       setFiles((prev) =>
         prev.filter(Boolean).map((f) => (f._id === updated._id ? updated : f)),
       );
       if (activeFileRef.current?._id === updated._id) setActiveFile(updated);
+      
+      toast({
+        title: "File Renamed",
+        description: `${oldName} → ${updated.name}`,
+        variant: "success"
+      });
     };
 
     const handleDeleted = (fileId) => {
       if (!fileId) return;
+      const deletedFile = files.find(f => f._id === fileId);
       setFiles((prev) => prev.filter(Boolean).filter((f) => f._id !== fileId));
       if (activeFileRef.current?._id === fileId) setActiveFile(null);
+      
+      toast({
+        title: "File Deleted",
+        description: `${deletedFile?.name || 'File'} was deleted by someone`,
+        variant: "destructive"
+      });
     };
 
     socket.on("workspace:file-created", handleCreated);
@@ -188,52 +214,70 @@ const WorkSpace = () => {
       socket.off("workspace:file-renamed", handleRenamed);
       socket.off("workspace:file-deleted", handleDeleted);
     };
-  }, [workspaceId]);
+  }, [workspaceId, files]);
 
-  const handleFileCreated = (payload) => {
+  const handleFileCreated = async (file) => {
     try {
-      const file = payload && payload.file ? payload.file : payload;
-      if (!file || (!file._id && !file.id)) return;
-
-      const safeFile = {
-        ...file,
-        _id: String(file._id ?? file.id),
-        name:
-          typeof file.name === "string" ? file.name : String(file.name ?? ""),
-      };
-
+      // Set flag to prevent socket event from adding duplicate
+      isCreatingRef.current = true;
+      
+      // The file is already created via the API in CreateFileDialog
+      // Just add it to the list
       setFiles((prev) => {
-        const safePrev = (prev || []).filter(Boolean);
-        const exists = safePrev.some(
-          (f) =>
-            String(f?._id) === safeFile._id ||
-            String(f?.name) === safeFile.name,
-        );
+        // Check if file already exists (prevent duplicates)
+        const exists = prev.some((f) => f._id === file._id || f.name === file.name);
         if (exists) {
-          return safePrev.map((f) =>
-            String(f?._id) === safeFile._id || String(f?.name) === safeFile.name
-              ? safeFile
-              : f,
-          );
+          return prev;
         }
-        const merged = [...safePrev, safeFile];
+        const merged = [...prev, file];
         return merged.sort((a, b) =>
           String(a.name || "").localeCompare(String(b.name || "")),
         );
       });
+      
+      toast({
+        title: "File Created",
+        description: `${file.name} created successfully`,
+        variant: "success"
+      });
+      
+      // Reset flag after a delay to allow socket events to be processed
+      setTimeout(() => {
+        isCreatingRef.current = false;
+      }, 500);
     } catch (err) {
-      console.error("handleFileCreated error:", err, payload);
+      console.error("handleFileCreated error:", err);
+      toast({
+        title: "Error",
+        description: "Failed to create file",
+        variant: "destructive"
+      });
+      isCreatingRef.current = false;
     }
   };
 
   const handleFileRenamed = (updated) => {
+    const oldName = files.find(f => f._id === updated._id)?.name || 'File';
     setFiles((prev) => prev.map((f) => (f._id === updated._id ? updated : f)));
     if (activeFile?._id === updated._id) setActiveFile(updated);
+    
+    toast({
+      title: "File Renamed",
+      description: `${oldName} → ${updated.name}`,
+      variant: "success"
+    });
   };
 
   const handleFileDeleted = (fileId) => {
+    const deletedFile = files.find(f => f._id === fileId);
     setFiles((prev) => prev.filter((f) => f._id !== fileId));
     if (activeFile?._id === fileId) setActiveFile(null);
+    
+    toast({
+      title: "File Deleted",
+      description: `${deletedFile?.name || 'File'} deleted successfully`,
+      variant: "destructive"
+    });
   };
 
   const handleContentSynced = useCallback((updatedFile) => {
@@ -268,6 +312,12 @@ const WorkSpace = () => {
       setSidebarCollapsed(true);
       setShowSidePanel(true);
     }
+    
+    toast({
+      title: isPreviewFullscreen ? "Preview Mode" : "Fullscreen Preview",
+      description: isPreviewFullscreen ? "Exited fullscreen mode" : "Entered fullscreen preview",
+      variant: "success"
+    });
   };
 
   // Determine layout based on screen size
@@ -587,6 +637,22 @@ const WorkSpace = () => {
           </main>
         )}
       </div>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 2px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      `}</style>
     </div>
   );
 };

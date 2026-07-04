@@ -3,8 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { workspaceApi } from '../api/workspaceApi';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { useToast } from '../context/ToastContext';
+
 import {
   Plus,
   FolderPlus,
@@ -34,6 +35,7 @@ const Dashboard = () => {
   const [deletingId, setDeletingId] = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchWorkspaces();
@@ -43,7 +45,6 @@ const Dashboard = () => {
     setLoading(true);
     try {
       const response = await workspaceApi.getWorkspaces();
-      console.log('Workspaces data:', response.data.workspaces);
       
       // Process workspaces to ensure they have memberCount
       const processedWorkspaces = response.data.workspaces.map(ws => {
@@ -59,8 +60,19 @@ const Dashboard = () => {
       });
       
       setWorkspaces(processedWorkspaces || []);
+      
+       toast({
+      title: "Success",
+      description: `Loaded ${processedWorkspaces.length} workspaces`,
+      variant: "success"
+    });
     } catch (error) {
       console.error('Error fetching workspaces:', error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to fetch workspaces.",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -75,9 +87,18 @@ const Dashboard = () => {
     try {
       await workspaceApi.deleteWorkspace(id);
       setWorkspaces(workspaces.filter(w => w._id !== id));
+      toast({
+        title: "Workspace Deleted",
+        description: `"${name}" has been deleted successfully.`,
+        variant: "success"
+      });
     } catch (error) {
       console.error('Error deleting workspace:', error);
-      alert(error.response?.data?.message || 'Failed to delete workspace. Please try again.');
+      toast({
+        title: "Delete Failed",
+        description: error.response?.data?.message || 'Failed to delete workspace. Please try again.',
+        variant: "destructive"
+      });
     } finally {
       setDeletingId(null);
     }
@@ -86,12 +107,31 @@ const Dashboard = () => {
   const handleWorkspaceCreated = (newWorkspace) => {
     setWorkspaces([newWorkspace, ...workspaces]);
     setShowCreateModal(false);
+    toast({
+      title: "Workspace Created",
+      description: `"${newWorkspace.name}" has been created successfully.`,
+      variant: "success"
+    });
   };
 
   const handleLogout = async () => {
     setShowLogoutDialog(false);
     setShowUserMenu(false);
-    await logout();
+    try {
+      await logout();
+      toast({
+        title: "Logged Out",
+        description: "You have been logged out successfully.",
+        variant: "success"
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Logout Failed",
+        description: "Something went wrong during logout. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Calculate stats
@@ -393,151 +433,149 @@ const Dashboard = () => {
         </div>
 
         {/* Workspace Grid */}
-      {/* Workspace Grid */}
-{/* Workspace Grid */}
-{loading ? (
-  <div className="flex items-center justify-center py-20">
-    <Loader2 className="w-8 h-8 animate-spin text-rose-400" />
-  </div>
-) : workspaces.length === 0 ? (
-  <div className="text-center py-20">
-    <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
-      <FolderPlus className="w-10 h-10 text-white/20" />
-    </div>
-    <h3 className="text-xl font-light text-white/60 mb-2">No workspaces yet</h3>
-    <p className="text-white/30 text-sm mb-6 max-w-md mx-auto">
-      Create your first workspace to start collaborating with your team. 
-      You can invite members and start coding together in real-time.
-    </p>
-    <Button 
-      onClick={() => setShowCreateModal(true)}
-      className="bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold rounded-xl hover:shadow-xl hover:shadow-rose-500/25 transition-all duration-300 border border-white/20"
-    >
-      <Plus className="mr-2 h-4 w-4" />
-      Create Workspace
-    </Button>
-  </div>
-) : (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-    {workspaces.map((workspace) => {
-      const isOwner = isWorkspaceOwner(workspace);
-      const role = getUserRole(workspace);
-      const RoleIcon = role.icon;
-      const memberCount = getMemberCount(workspace);
-      const members = getMembers(workspace);
-      const ownerName = getOwnerName(workspace);
-      
-      return (
-        <div 
-          key={workspace.id || workspace._id}
-          className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:shadow-xl hover:shadow-white/5"
-        >
-          {/* Subtle gradient overlay on hover */}
-          <div className="absolute inset-0 bg-gradient-to-br from-rose-500/0 via-cyan-500/0 to-transparent transition-all duration-500 hover:from-rose-500/5 hover:via-cyan-500/5"></div>
-          
-          <div className="relative p-5">
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-base font-semibold text-white/90 truncate transition-colors duration-300 hover:text-white">
-                  {workspace.name}
-                </h3>
-                {workspace.description && (
-                  <p className="text-sm text-white/30 mt-1 line-clamp-2 transition-colors duration-300 hover:text-white/40">
-                    {workspace.description}
-                  </p>
-                )}
-              </div>
-              {isOwner && (
-                <button
-                  onClick={() => handleDeleteWorkspace(workspace.id || workspace._id, workspace.name)}
-                  disabled={deletingId === (workspace.id || workspace._id)}
-                  className="p-1.5 rounded-lg hover:bg-rose-500/10 text-white/20 hover:text-rose-400 transition-all duration-300 disabled:opacity-50"
-                >
-                  {deletingId === (workspace.id || workspace._id) ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="w-4 h-4" />
-                  )}
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4 mt-3 text-sm text-white/30">
-              <div className="flex items-center gap-1.5 transition-colors duration-300 hover:text-white/50">
-                <Users className="w-4 h-4" />
-                <span>{memberCount} {memberCount === 1 ? 'member' : 'members'}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Calendar className="w-4 h-4" />
-                <span>{new Date(workspace.createdAt).toLocaleDateString()}</span>
-              </div>
-            </div>
-
-            <div className="mt-1 text-xs text-white/20">
-              Created by {ownerName}
-            </div>
-
-            <div className="mt-4 flex items-center justify-between">
-              <div className="flex -space-x-2">
-                {members.length > 0 ? (
-                  members.slice(0, 4).map((member, index) => {
-                    const memberName = member.name || member.username || 'User';
-                    const memberEmail = member.email || '';
-                    const initial = memberName?.charAt(0).toUpperCase() || 
-                                  memberEmail?.charAt(0).toUpperCase() || 
-                                  'U';
-                    const displayName = memberName || memberEmail || 'User';
-                    
-                    return (
-                      <div
-                        key={index}
-                        className="w-7 h-7 rounded-full border-2 border-[#0a0a0a] bg-white/10 flex items-center justify-center text-xs font-medium text-white/50 transition-all duration-300 hover:scale-110 hover:bg-white/20 hover:border-white/20"
-                        title={displayName}
-                      >
-                        {initial}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div
-                    className="w-7 h-7 rounded-full border-2 border-[#0a0a0a] bg-white/10 flex items-center justify-center text-xs font-medium text-white/50 transition-all duration-300 hover:scale-110 hover:bg-white/20 hover:border-white/20"
-                    title={ownerName}
-                  >
-                    {ownerName.charAt(0).toUpperCase()}
-                  </div>
-                )}
-                {memberCount > 4 && (
-                  <div className="w-7 h-7 rounded-full border-2 border-[#0a0a0a] bg-white/5 flex items-center justify-center text-xs text-white/30 transition-all duration-300 hover:bg-white/10">
-                    +{memberCount - 4}
-                  </div>
-                )}
-              </div>
-
-              <Link to={`/workspace/${workspace.id || workspace._id}`}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-white/40 hover:text-white hover:bg-white/10 transition-all duration-300 text-sm group"
-                >
-                  Open
-                  <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-300 group-hover:translate-x-1" />
-                </Button>
-              </Link>
-            </div>
-
-            {/* Role Badge */}
-            <div className="absolute top-4 right-14">
-              <span className={`text-[10px] font-medium px-2.5 py-1 rounded-full ${role.bg} ${role.color} border ${role.border} flex items-center gap-1 transition-all duration-300 hover:scale-105`}>
-                <RoleIcon className="w-3 h-3" />
-                {role.label}
-              </span>
-            </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <Loader2 className="w-8 h-8 animate-spin text-rose-400" />
           </div>
-        </div>
-      );
-    })}
-  </div>
-)}
+        ) : workspaces.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-white/5 border border-white/10 flex items-center justify-center">
+              <FolderPlus className="w-10 h-10 text-white/20" />
+            </div>
+            <h3 className="text-xl font-light text-white/60 mb-2">No workspaces yet</h3>
+            <p className="text-white/30 text-sm mb-6 max-w-md mx-auto">
+              Create your first workspace to start collaborating with your team. 
+              You can invite members and start coding together in real-time.
+            </p>
+            <Button 
+              onClick={() => setShowCreateModal(true)}
+              className="bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold rounded-xl hover:shadow-xl hover:shadow-rose-500/25 transition-all duration-300 border border-white/20"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create Workspace
+            </Button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {workspaces.map((workspace) => {
+              const isOwner = isWorkspaceOwner(workspace);
+              const role = getUserRole(workspace);
+              const RoleIcon = role.icon;
+              const memberCount = getMemberCount(workspace);
+              const members = getMembers(workspace);
+              const ownerName = getOwnerName(workspace);
+              
+              return (
+                <div 
+                  key={workspace.id || workspace._id}
+                  className="relative bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:bg-white/10 hover:border-white/20 hover:shadow-xl hover:shadow-white/5"
+                >
+                  {/* Subtle gradient overlay on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-rose-500/0 via-cyan-500/0 to-transparent transition-all duration-500 hover:from-rose-500/5 hover:via-cyan-500/5"></div>
+                  
+                  <div className="relative p-5">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-base font-semibold text-white/90 truncate transition-colors duration-300 hover:text-white">
+                          {workspace.name}
+                        </h3>
+                        {workspace.description && (
+                          <p className="text-sm text-white/30 mt-1 line-clamp-2 transition-colors duration-300 hover:text-white/40">
+                            {workspace.description}
+                          </p>
+                        )}
+                      </div>
+                      {isOwner && (
+                        <button
+                          onClick={() => handleDeleteWorkspace(workspace.id || workspace._id, workspace.name)}
+                          disabled={deletingId === (workspace.id || workspace._id)}
+                          className="p-1.5 rounded-lg hover:bg-rose-500/10 text-white/20 hover:text-rose-400 transition-all duration-300 disabled:opacity-50"
+                        >
+                          {deletingId === (workspace.id || workspace._id) ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-4 mt-3 text-sm text-white/30">
+                      <div className="flex items-center gap-1.5 transition-colors duration-300 hover:text-white/50">
+                        <Users className="w-4 h-4" />
+                        <span>{memberCount} {memberCount === 1 ? 'member' : 'members'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-4 h-4" />
+                        <span>{new Date(workspace.createdAt).toLocaleDateString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="mt-1 text-xs text-white/20">
+                      Created by {ownerName}
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex -space-x-2">
+                        {members.length > 0 ? (
+                          members.slice(0, 4).map((member, index) => {
+                            const memberName = member.name || member.username || 'User';
+                            const memberEmail = member.email || '';
+                            const initial = memberName?.charAt(0).toUpperCase() || 
+                                          memberEmail?.charAt(0).toUpperCase() || 
+                                          'U';
+                            const displayName = memberName || memberEmail || 'User';
+                            
+                            return (
+                              <div
+                                key={index}
+                                className="w-7 h-7 rounded-full border-2 border-[#0a0a0a] bg-white/10 flex items-center justify-center text-xs font-medium text-white/50 transition-all duration-300 hover:scale-110 hover:bg-white/20 hover:border-white/20"
+                                title={displayName}
+                              >
+                                {initial}
+                              </div>
+                            );
+                          })
+                        ) : (
+                          <div
+                            className="w-7 h-7 rounded-full border-2 border-[#0a0a0a] bg-white/10 flex items-center justify-center text-xs font-medium text-white/50 transition-all duration-300 hover:scale-110 hover:bg-white/20 hover:border-white/20"
+                            title={ownerName}
+                          >
+                            {ownerName.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                        {memberCount > 4 && (
+                          <div className="w-7 h-7 rounded-full border-2 border-[#0a0a0a] bg-white/5 flex items-center justify-center text-xs text-white/30 transition-all duration-300 hover:bg-white/10">
+                            +{memberCount - 4}
+                          </div>
+                        )}
+                      </div>
+
+                      <Link to={`/workspace/${workspace.id || workspace._id}`}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-white/40 hover:text-white hover:bg-white/10 transition-all duration-300 text-sm group"
+                        >
+                          Open
+                          <ArrowRight className="w-4 h-4 ml-1 transition-transform duration-300 group-hover:translate-x-1" />
+                        </Button>
+                      </Link>
+                    </div>
+
+                    {/* Role Badge */}
+                    <div className="absolute top-4 right-14">
+                      <span className={`text-[10px] font-medium px-2.5 py-1 rounded-full ${role.bg} ${role.color} border ${role.border} flex items-center gap-1 transition-all duration-300 hover:scale-105`}>
+                        <RoleIcon className="w-3 h-3" />
+                        {role.label}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Create Workspace Modal */}
