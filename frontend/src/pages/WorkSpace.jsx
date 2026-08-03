@@ -37,6 +37,27 @@ const WorkSpace = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Design tokens matching Landing page
+  const raised = {
+    background: "linear-gradient(160deg, #F7F8FA 0%, #E5E7EB 100%)",
+    boxShadow:
+      "7px 7px 16px rgba(163,167,178,0.45), -7px -7px 16px rgba(255,255,255,0.85), inset 0 1px 0 rgba(255,255,255,0.6)",
+    border: "1px solid rgba(255,255,255,0.5)",
+  };
+
+  const raisedSm = {
+    background: "linear-gradient(160deg, #F7F8FA 0%, #E7E9EC 100%)",
+    boxShadow:
+      "4px 4px 10px rgba(163,167,178,0.4), -4px -4px 10px rgba(255,255,255,0.85)",
+    border: "1px solid rgba(255,255,255,0.5)",
+  };
+
+  const pressed = {
+    background: "linear-gradient(160deg, #E3E5E9 0%, #F0F1F4 100%)",
+    boxShadow:
+      "inset 3px 3px 7px rgba(163,167,178,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)",
+  };
+
   const [workspace, setWorkspace] = useState(null);
   const [files, setFiles] = useState([]);
   const [activeFile, setActiveFile] = useState(null);
@@ -49,7 +70,7 @@ const WorkSpace = () => {
   const [isTablet, setIsTablet] = useState(window.innerWidth < 1280);
   const [terminalHeight, setTerminalHeight] = useState(300);
   const activeFileRef = useRef(activeFile);
-  const isCreatingRef = useRef(false); // Track if we're currently creating a file
+  const isCreatingRef = useRef(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -85,11 +106,11 @@ const WorkSpace = () => {
         ),
       );
       setFiles(fullFiles);
-       toast({
-      title: "Workspace Loaded",
-      description: `"${wsRes.data.workspace.name}" ready to code`,
-      variant: "success"
-    });
+      toast({
+        title: "Workspace Loaded",
+        description: `"${wsRes.data.workspace.name}" ready to code`,
+        variant: "success"
+      });
     } catch (err) {
       console.error(err);
       toast({
@@ -121,7 +142,6 @@ const WorkSpace = () => {
 
     const handleCreated = (payload) => {
       try {
-        // Skip if we're the one who created the file (handled locally)
         if (isCreatingRef.current) {
           console.log('Skipping socket event - we created this file');
           return;
@@ -136,14 +156,12 @@ const WorkSpace = () => {
         const safeFile = {
           ...file,
           _id: String(file._id ?? file.id),
-          name:
-            typeof file.name === "string" ? file.name : String(file.name ?? ""),
+          name: typeof file.name === "string" ? file.name : String(file.name ?? ""),
         };
 
         setFiles((prev) => {
           try {
             const safePrev = (prev || []).filter(Boolean);
-            // Check if file already exists
             const exists = safePrev.some(
               (f) => String(f?._id) === safeFile._id
             );
@@ -157,11 +175,7 @@ const WorkSpace = () => {
               String(a.name || "").localeCompare(String(b.name || "")),
             );
           } catch (inner) {
-            console.error(
-              "Error updating files list on create:",
-              inner,
-              payload,
-            );
+            console.error("Error updating files list on create:", inner, payload);
             return prev;
           }
         });
@@ -218,13 +232,9 @@ const WorkSpace = () => {
 
   const handleFileCreated = async (file) => {
     try {
-      // Set flag to prevent socket event from adding duplicate
       isCreatingRef.current = true;
       
-      // The file is already created via the API in CreateFileDialog
-      // Just add it to the list
       setFiles((prev) => {
-        // Check if file already exists (prevent duplicates)
         const exists = prev.some((f) => f._id === file._id || f.name === file.name);
         if (exists) {
           return prev;
@@ -241,7 +251,6 @@ const WorkSpace = () => {
         variant: "success"
       });
       
-      // Reset flag after a delay to allow socket events to be processed
       setTimeout(() => {
         isCreatingRef.current = false;
       }, 500);
@@ -320,32 +329,48 @@ const WorkSpace = () => {
     });
   };
 
-  // Determine layout based on screen size
   const isBottomLayout = isMobile || isTablet;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-rose-400" />
+      <div className="min-h-screen flex items-center justify-center" style={{ background: "#ECEDF0" }}>
+        <div className="relative w-14 h-14 rounded-full flex items-center justify-center" style={raisedSm}>
+          <div className="w-8 h-8 border-4 border-[#C1652F] border-t-transparent rounded-full animate-spin" />
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="h-screen flex flex-col bg-[#0a0a0a] text-white overflow-hidden">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 h-14 border-b border-white/10 bg-linear-to-r from-[#0a0a0a] to-[#141414] backdrop-blur-xl shrink-0 z-10">
+    <div className="h-screen flex flex-col overflow-hidden" style={{ background: "#ECEDF0" }}>
+      {/* Paper-grain texture */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.4]"
+        style={{
+          backgroundImage:
+            "radial-gradient(rgba(0,0,0,0.015) 1px, transparent 1px)",
+          backgroundSize: "3px 3px",
+        }}
+      />
+
+      {/* Top Bar */}
+      <div className="flex items-center justify-between px-4 h-14 shrink-0 z-10" style={raised}>
         <div className="flex items-center gap-3 min-w-0">
-          <Button
-            variant="ghost"
-            size="icon"
+          <button
             onClick={() => navigate("/dashboard")}
-            className="text-white/40 hover:text-white hover:bg-white/10 rounded-lg h-8 w-8 transition-all"
+            className="p-1.5 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95"
+            style={raisedSm}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = '#C1652F';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = '#787B85';
+            }}
           >
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
+            <ArrowLeft className="w-4 h-4" style={{ color: '#787B85' }} />
+          </button>
           <div className="min-w-0">
-            <h1 className="text-sm font-semibold text-white/90 truncate">
+            <h1 className="text-sm font-bold tracking-tight truncate" style={{ color: '#26262B' }}>
               {workspace?.name}
             </h1>
           </div>
@@ -356,102 +381,130 @@ const WorkSpace = () => {
           {activeMode && (
             <>
               {activeMode === "preview" && (
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
                   onClick={togglePreviewFullscreen}
-                  className="text-white/50 hover:text-white hover:bg-white/10 rounded-lg h-8 text-xs transition-all"
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center gap-1.5"
+                  style={raisedSm}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#C1652F';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#787B85';
+                  }}
                 >
                   {isPreviewFullscreen ? (
-                    <Minimize2 className="w-3.5 h-3.5 mr-1.5" />
+                    <Minimize2 className="w-3.5 h-3.5" />
                   ) : (
-                    <Maximize2 className="w-3.5 h-3.5 mr-1.5" />
+                    <Maximize2 className="w-3.5 h-3.5" />
                   )}
                   {isPreviewFullscreen ? "Exit Full" : "Full Preview"}
-                </Button>
+                </button>
               )}
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => setShowSidePanel((s) => !s)}
-                className="text-white/50 hover:text-white hover:bg-white/10 rounded-lg h-8 text-xs transition-all"
+                className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center gap-1.5"
+                style={raisedSm}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#C1652F';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#787B85';
+                }}
               >
                 {showSidePanel ? (
-                  <EyeOff className="w-3.5 h-3.5 mr-1.5" />
+                  <EyeOff className="w-3.5 h-3.5" />
                 ) : activeMode === "preview" ? (
-                  <Eye className="w-3.5 h-3.5 mr-1.5" />
+                  <Eye className="w-3.5 h-3.5" />
                 ) : (
-                  <Terminal className="w-3.5 h-3.5 mr-1.5" />
+                  <Terminal className="w-3.5 h-3.5" />
                 )}
                 {showSidePanel
                   ? "Hide"
                   : activeMode === "preview"
                     ? "Show Preview"
                     : "Show Output"}
-              </Button>
+              </button>
             </>
           )}
           <Link to={`/workspace/${workspaceId}/members`}>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-white/50 hover:text-white hover:bg-white/10 rounded-lg h-8 text-xs transition-all"
+            <button
+              className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center gap-1.5"
+              style={raisedSm}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#C1652F';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#787B85';
+              }}
             >
-              <Users className="w-3.5 h-3.5 mr-1.5" />
+              <Users className="w-3.5 h-3.5" />
               Members
-            </Button>
+            </button>
           </Link>
           {isOwner && (
             <Link to={`/workspace/${workspaceId}/invite`}>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-white/50 hover:text-white hover:bg-white/10 rounded-lg h-8 text-xs transition-all"
+              <button
+                className="px-3 py-1.5 text-xs font-medium rounded-lg transition-all duration-300 hover:scale-[1.02] active:scale-95 flex items-center gap-1.5"
+                style={raisedSm}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#C1652F';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#787B85';
+                }}
               >
-                <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                <UserPlus className="w-3.5 h-3.5" />
                 Invite
-              </Button>
+              </button>
             </Link>
           )}
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex flex-1 min-h-0">
+      <div className="flex flex-1 min-h-0 relative">
         {/* Sidebar */}
         <aside
-          className={`shrink-0 border-r border-white/10 bg-linear-to-b from-[#0a0a0a] to-[#0f0f0f] flex flex-col transition-all duration-300 ${
+          className={`shrink-0 flex flex-col transition-all duration-300 ${
             isPreviewFullscreen
               ? "w-0 overflow-hidden border-0"
               : sidebarCollapsed
                 ? "w-11"
                 : "w-64"
           }`}
+          style={{
+            ...raised,
+            borderRight: '1px solid rgba(163,167,178,0.2)',
+            borderRadius: '0',
+          }}
         >
           {!isPreviewFullscreen && (
             <>
               <div className="flex items-center justify-between px-2 pt-4 pb-2">
                 {!sidebarCollapsed && (
                   <div className="flex items-center gap-2 px-1">
-                    <Files className="w-3.5 h-3.5 text-white/30" />
-                    <span className="text-xs font-medium text-white/40 uppercase tracking-wide">
+                    <Files className="w-3.5 h-3.5" style={{ color: '#C1652F' }} />
+                    <span className="text-xs font-medium uppercase tracking-wide" style={{ color: '#787B85' }}>
                       Files ({files.length})
                     </span>
                   </div>
                 )}
                 <button
                   onClick={() => setSidebarCollapsed((c) => !c)}
-                  className={`p-1.5 rounded-lg hover:bg-white/10 text-white/30 hover:text-white/70 transition-colors ${
-                    sidebarCollapsed ? "mx-auto" : ""
-                  }`}
-                  title={
-                    sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"
-                  }
+                  className={`p-1.5 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 ${sidebarCollapsed ? "mx-auto" : ""}`}
+                  style={raisedSm}
+                  title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#C1652F';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#787B85';
+                  }}
                 >
                   {sidebarCollapsed ? (
-                    <PanelLeftOpen className="w-4 h-4" />
+                    <PanelLeftOpen className="w-4 h-4" style={{ color: '#787B85' }} />
                   ) : (
-                    <PanelLeftClose className="w-4 h-4" />
+                    <PanelLeftClose className="w-4 h-4" style={{ color: '#787B85' }} />
                   )}
                 </button>
               </div>
@@ -472,7 +525,7 @@ const WorkSpace = () => {
                     ))}
                   </div>
 
-                  <div className="p-2 border-t border-white/5">
+                  <div className="p-2" style={{ borderTop: '1px solid rgba(163,167,178,0.15)' }}>
                     <CreateFileDialog
                       workspaceId={workspaceId}
                       onCreated={handleFileCreated}
@@ -484,11 +537,9 @@ const WorkSpace = () => {
           )}
         </aside>
 
-        {/* Main Area - changes based on screen size */}
+        {/* Main Area */}
         {isBottomLayout ? (
-          // Bottom Layout (Mobile/Tablet)
           <div className="flex-1 flex flex-col min-h-0">
-            {/* Editor Area */}
             <div className="flex-1 min-h-0 relative">
               {activeFile ? (
                 <FileEditor
@@ -496,10 +547,10 @@ const WorkSpace = () => {
                   onContentSynced={handleContentSynced}
                 />
               ) : (
-                <div className="flex-1 flex items-center justify-center bg-[#0b0b0b]">
+                <div className="flex-1 flex items-center justify-center rounded-[20px]" style={pressed}>
                   <div className="text-center">
-                    <Code2 className="w-10 h-10 text-white/10 mx-auto mb-3" />
-                    <p className="text-white/30 text-sm">
+                    <Code2 className="w-10 h-10 mx-auto mb-3" style={{ color: '#C1652F' }} />
+                    <p className="text-sm" style={{ color: '#787B85' }}>
                       Select a file to start editing
                     </p>
                   </div>
@@ -507,16 +558,21 @@ const WorkSpace = () => {
               )}
             </div>
 
-            {/* Bottom Panel - Terminal/Preview */}
             {activeFile && showSidePanel && activeMode && (
               <div
-                className="border-t border-white/10 bg-[#0a0a0a] flex flex-col"
+                className="border-t flex flex-col"
                 style={{
+                  borderColor: 'rgba(163,167,178,0.2)',
+                  background: '#ECEDF0',
                   height: `${Math.min(terminalHeight, window.innerHeight * 0.6)}px`,
                 }}
               >
                 <div
-                  className="flex items-center justify-between px-3 py-2 bg-white/5 cursor-row-resize"
+                  className="flex items-center justify-between px-3 py-2 cursor-row-resize"
+                  style={{
+                    ...raisedSm,
+                    borderBottom: '1px solid rgba(163,167,178,0.15)',
+                  }}
                   onMouseDown={(e) => {
                     const startY = e.clientY;
                     const startHeight = terminalHeight;
@@ -538,21 +594,24 @@ const WorkSpace = () => {
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <GripVertical className="w-3.5 h-3.5 text-white/30" />
-                    <span className="text-xs font-medium text-white/40 uppercase tracking-wide">
+                    <GripVertical className="w-3.5 h-3.5" style={{ color: '#C1652F' }} />
+                    <span className="text-xs font-medium uppercase tracking-wide" style={{ color: '#787B85' }}>
                       {activeMode === "preview" ? "Preview" : "Terminal Output"}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowSidePanel(false)}
-                      className="text-white/30 hover:text-white hover:bg-white/10 rounded-lg h-6 w-6 p-0"
-                    >
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
+                  <button
+                    onClick={() => setShowSidePanel(false)}
+                    className="p-1 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95"
+                    style={raisedSm}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#C1652F';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#787B85';
+                    }}
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" style={{ color: '#787B85' }} />
+                  </button>
                 </div>
                 <div className="flex-1 min-h-0">
                   {activeMode === "preview" ? (
@@ -569,11 +628,9 @@ const WorkSpace = () => {
             )}
           </div>
         ) : (
-          // Side Layout (Desktop)
           <main className="flex-1 flex min-w-0 relative">
             {activeFile ? (
               <>
-                {/* Editor */}
                 <div
                   className={`min-w-0 transition-all duration-300 ${isPreviewFullscreen ? "w-0 overflow-hidden" : showSidePanel && activeMode ? "w-1/2" : "w-full"}`}
                 >
@@ -583,10 +640,12 @@ const WorkSpace = () => {
                   />
                 </div>
 
-                {/* Preview/Run Panel */}
                 {showSidePanel && activeMode && (
                   <div
                     className={`transition-all duration-300 ${isPreviewFullscreen ? "w-full" : activeMode ? "w-1/2" : "w-0"} min-w-0`}
+                    style={{
+                      borderLeft: '1px solid rgba(163,167,178,0.2)'
+                    }}
                   >
                     {activeMode === "preview" ? (
                       <LivePreview
@@ -600,35 +659,42 @@ const WorkSpace = () => {
                   </div>
                 )}
 
-                {/* Sliding handle for side panel */}
-                {isMobile &&
-                  showSidePanel &&
-                  activeMode &&
-                  !isPreviewFullscreen && (
-                    <button
-                      onClick={() => setShowSidePanel(false)}
-                      className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-l-lg p-1 z-10 transition-all"
-                    >
-                      <ChevronRight className="w-4 h-4 text-white/50" />
-                    </button>
-                  )}
-                {isMobile &&
-                  !showSidePanel &&
-                  activeMode &&
-                  !isPreviewFullscreen && (
-                    <button
-                      onClick={() => setShowSidePanel(true)}
-                      className="absolute right-0 top-1/2 -translate-y-1/2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-l-lg p-1 z-10 transition-all"
-                    >
-                      <ChevronLeft className="w-4 h-4 text-white/50" />
-                    </button>
-                  )}
+                {isMobile && showSidePanel && activeMode && !isPreviewFullscreen && (
+                  <button
+                    onClick={() => setShowSidePanel(false)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 p-1 z-10 rounded-l-lg transition-all duration-300"
+                    style={raisedSm}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#C1652F';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#787B85';
+                    }}
+                  >
+                    <ChevronRight className="w-4 h-4" style={{ color: '#787B85' }} />
+                  </button>
+                )}
+                {isMobile && !showSidePanel && activeMode && !isPreviewFullscreen && (
+                  <button
+                    onClick={() => setShowSidePanel(true)}
+                    className="absolute right-0 top-1/2 -translate-y-1/2 p-1 z-10 rounded-l-lg transition-all duration-300"
+                    style={raisedSm}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = '#C1652F';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = '#787B85';
+                    }}
+                  >
+                    <ChevronLeft className="w-4 h-4" style={{ color: '#787B85' }} />
+                  </button>
+                )}
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center bg-[#0b0b0b]">
+              <div className="flex-1 flex items-center justify-center rounded-[20px]" style={pressed}>
                 <div className="text-center">
-                  <Code2 className="w-10 h-10 text-white/10 mx-auto mb-3" />
-                  <p className="text-white/30 text-sm">
+                  <Code2 className="w-10 h-10 mx-auto mb-3" style={{ color: '#C1652F' }} />
+                  <p className="text-sm" style={{ color: '#787B85' }}>
                     Select a file to start editing
                   </p>
                 </div>
@@ -646,11 +712,11 @@ const WorkSpace = () => {
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
+          background: rgba(193,101,47,0.2);
           border-radius: 2px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.2);
+          background: rgba(193,101,47,0.3);
         }
       `}</style>
     </div>

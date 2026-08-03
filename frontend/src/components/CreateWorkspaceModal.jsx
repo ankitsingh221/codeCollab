@@ -3,13 +3,35 @@ import { workspaceApi } from "../api/workspaceApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { X, Loader2, Sparkles, Plus } from "lucide-react";
+import { X, Loader2, Sparkles, Plus, FolderPlus, AlertCircle } from "lucide-react";
 
 const CreateWorkspaceModal = ({ isOpen, onClose, onWorkspaceCreated }) => {
+  // Design tokens matching Landing page
+  const raised = {
+    background: "linear-gradient(160deg, #F7F8FA 0%, #E5E7EB 100%)",
+    boxShadow:
+      "7px 7px 16px rgba(163,167,178,0.45), -7px -7px 16px rgba(255,255,255,0.85), inset 0 1px 0 rgba(255,255,255,0.6)",
+    border: "1px solid rgba(255,255,255,0.5)",
+  };
+
+  const raisedSm = {
+    background: "linear-gradient(160deg, #F7F8FA 0%, #E7E9EC 100%)",
+    boxShadow:
+      "4px 4px 10px rgba(163,167,178,0.4), -4px -4px 10px rgba(255,255,255,0.85)",
+    border: "1px solid rgba(255,255,255,0.5)",
+  };
+
+  const pressed = {
+    background: "linear-gradient(160deg, #E3E5E9 0%, #F0F1F4 100%)",
+    boxShadow:
+      "inset 3px 3px 7px rgba(163,167,178,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)",
+  };
+
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [focusedField, setFocusedField] = useState(null);
   const inputRef = useRef(null);
 
   useEffect(() => {
@@ -55,103 +77,176 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onWorkspaceCreated }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={handleOverlayClick}
     >
-      <div className="relative w-full max-w-md bg-gradient-to-br from-[#0a0a0a] via-[#0d0d0d] to-[#0a0a0a] rounded-2xl border border-white/10 shadow-2xl animate-in zoom-in-95 duration-200">
-        {/* Decorative gradient line */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-rose-400/50 via-cyan-400/50 to-rose-400/50"></div>
+      <div className="relative w-full max-w-md rounded-[20px] transition-all duration-300 animate-in zoom-in-95 duration-200" style={raised}>
+        {/* Decorative top line */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] rounded-t-[20px]"
+          style={{
+            background: 'linear-gradient(90deg, #C1652F, #D07B47, #C1652F)',
+            opacity: 0.6
+          }}
+        ></div>
 
         {/* Close button */}
         <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-white/30 hover:text-white/60 hover:bg-white/5 p-1.5 rounded-lg transition-all duration-300"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="absolute top-4 right-4 p-1.5 rounded-lg transition-all duration-300 hover:scale-110 active:scale-95 z-10"
+          style={raisedSm}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = '#C1652F';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = '#787B85';
+          }}
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5" style={{ color: '#787B85' }} />
         </button>
 
-        <div className="p-6">
+        <div className="relative p-6">
           <div className="mb-6">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-xs text-white/60 tracking-wider uppercase mb-3">
-              <Sparkles className="w-3 h-3 text-rose-400" />
-              <span className="bg-gradient-to-r from-rose-400 to-cyan-400 bg-clip-text text-transparent font-semibold">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-3 rounded-full" style={pressed}>
+              <Sparkles className="w-3 h-3" style={{ color: '#C1652F' }} />
+              <span className="text-[11px] tracking-[0.15em] uppercase font-bold" style={{ color: '#6B6D75' }}>
                 New Workspace
               </span>
+              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#C1652F' }} />
             </div>
-            <h2 className="text-2xl font-light text-white">Create Workspace</h2>
-            <p className="text-sm text-white/40 mt-1">
+            <h2 className="text-2xl font-bold tracking-tight" style={{ color: '#26262B' }}>
+              Create Workspace
+            </h2>
+            <p className="text-sm mt-1" style={{ color: '#787B85' }}>
               Create a new workspace to start collaborating with your team
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label
-                htmlFor="name"
-                className="text-white/60 text-sm font-medium"
-              >
-                Workspace Name <span className="text-rose-400">*</span>
+              <Label htmlFor="name" className="text-sm font-medium flex items-center gap-2" style={{ color: '#4A4C53' }}>
+                <FolderPlus className="w-3.5 h-3.5" style={{ color: '#C1652F' }} />
+                Workspace Name <span style={{ color: '#C1652F' }}>*</span>
               </Label>
-              <Input
-                ref={inputRef}
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Enter workspace name"
-                required
-                maxLength={50}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-rose-400/50 focus:ring-rose-400/20 rounded-xl transition-all duration-300"
-              />
-              <div className="text-right text-xs text-white/20">
+              <div className="relative">
+                <Input
+                  ref={inputRef}
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter workspace name"
+                  required
+                  maxLength={50}
+                  onFocus={() => setFocusedField('name')}
+                  onBlur={() => setFocusedField(null)}
+                  className="transition-all duration-300"
+                  style={{
+                    ...(focusedField === 'name' ? pressed : raisedSm),
+                    borderRadius: '12px',
+                    border: focusedField === 'name' 
+                      ? '2px solid #C1652F' 
+                      : '1px solid rgba(255,255,255,0.5)',
+                    color: '#2B2B2F',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    background: focusedField === 'name' 
+                      ? "linear-gradient(160deg, #E3E5E9 0%, #F0F1F4 100%)"
+                      : "linear-gradient(160deg, #F7F8FA 0%, #E7E9EC 100%)",
+                  }}
+                />
+              </div>
+              <div className="text-right text-xs" style={{ color: '#787B85' }}>
                 {name.length}/50
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label
-                htmlFor="description"
-                className="text-white/60 text-sm font-medium"
-              >
-                Description{" "}
-                <span className="text-white/20 text-xs">(optional)</span>
+              <Label htmlFor="description" className="text-sm font-medium flex items-center gap-2" style={{ color: '#4A4C53' }}>
+                <AlertCircle className="w-3.5 h-3.5" style={{ color: '#C1652F' }} />
+                Description <span className="text-xs" style={{ color: '#787B85' }}>(optional)</span>
               </Label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="What's this workspace about?"
-                maxLength={200}
-                rows={3}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:border-rose-400/50 focus:ring-rose-400/20 transition-all duration-300 resize-none outline-none"
-              />
-              <div className="text-right text-xs text-white/20">
+              <div className="relative">
+                <textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="What's this workspace about?"
+                  maxLength={200}
+                  rows={3}
+                  onFocus={() => setFocusedField('description')}
+                  onBlur={() => setFocusedField(null)}
+                  className="w-full transition-all duration-300 resize-none outline-none"
+                  style={{
+                    ...(focusedField === 'description' ? pressed : raisedSm),
+                    borderRadius: '12px',
+                    border: focusedField === 'description' 
+                      ? '2px solid #C1652F' 
+                      : '1px solid rgba(255,255,255,0.5)',
+                    color: '#2B2B2F',
+                    padding: '12px 16px',
+                    fontSize: '14px',
+                    minHeight: '80px',
+                    fontFamily: 'inherit',
+                    background: focusedField === 'description' 
+                      ? "linear-gradient(160deg, #E3E5E9 0%, #F0F1F4 100%)"
+                      : "linear-gradient(160deg, #F7F8FA 0%, #E7E9EC 100%)",
+                  }}
+                />
+              </div>
+              <div className="text-right text-xs" style={{ color: '#787B85' }}>
                 {description.length}/200
               </div>
             </div>
 
             {error && (
-              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm px-4 py-2 rounded-xl animate-in slide-in-from-top-2 duration-200">
-                {error}
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl text-sm animate-in slide-in-from-top-2 duration-200" style={pressed}>
+                <AlertCircle className="w-4 h-4 shrink-0" style={{ color: '#C1652F' }} />
+                <span style={{ color: '#6B4A3A' }}>{error}</span>
               </div>
             )}
 
-            <div className="flex flex-col sm:flex-row gap-3 pt-6 border-t border-white/5">
+            <div className="flex flex-col sm:flex-row gap-3 pt-6" style={{ borderTop: '1px solid rgba(163,167,178,0.2)' }}>
               <Button
                 type="button"
                 variant="ghost"
                 onClick={onClose}
-                className="sm:flex-1 bg-white/5 hover:bg-white/10 backdrop-blur-sm text-white/40 hover:text-white rounded-xl transition-all duration-300 border border-white/5 hover:border-white/10"
+                className="sm:flex-1 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                style={{
+                  ...raisedSm,
+                  color: '#787B85',
+                  border: '1px solid rgba(255,255,255,0.5)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#2B2B2F';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#787B85';
+                }}
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={loading || !name.trim()}
-                className="sm:flex-[1.5] relative overflow-hidden bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold rounded-xl transition-all duration-300 border border-white/20 disabled:opacity-50 disabled:cursor-not-allowed py-2.5 group"
+                className="sm:flex-[1.5] font-bold transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.02] active:scale-95 group"
+                style={{
+                  background: loading || !name.trim()
+                    ? 'linear-gradient(160deg, #E8ECF4 0%, #D5D9E0 100%)'
+                    : "linear-gradient(160deg, #D07B47, #B0552A)",
+                  boxShadow: loading || !name.trim()
+                    ? '2px 2px 4px rgba(163,167,178,0.3), -2px -2px 4px rgba(255,255,255,0.5)'
+                    : "4px 4px 10px rgba(163,167,178,0.4), -2px -2px 6px rgba(255,255,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                  borderRadius: '14px',
+                  color: loading || !name.trim() ? '#787B85' : '#FBF6F1',
+                  border: loading || !name.trim()
+                    ? '1px solid rgba(163,167,178,0.2)'
+                    : '1px solid rgba(255,255,255,0.15)',
+                  padding: '12px 20px',
+                  fontSize: '15px'
+                }}
               >
-                {/* Shine effect */}
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
-
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin inline" />
@@ -159,7 +254,7 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onWorkspaceCreated }) => {
                   </>
                 ) : (
                   <>
-                    <Plus className="w-4 h-4 mr-2 inline group-hover:rotate-90 transition-transform duration-300" />
+                    <Plus className="w-4 h-4 mr-2 inline transition-transform duration-300 group-hover:rotate-90" />
                     Create Workspace
                   </>
                 )}
@@ -168,6 +263,46 @@ const CreateWorkspaceModal = ({ isOpen, onClose, onWorkspaceCreated }) => {
           </form>
         </div>
       </div>
+
+      <style>{`
+        @keyframes slide-in-from-top-2 {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .slide-in-from-top-2 {
+          animation: slide-in-from-top-2 0.2s ease-out;
+        }
+        @keyframes fade-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes zoom-in-95 {
+          from { 
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to { 
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+        .animate-in {
+          animation-duration: 200ms;
+          animation-fill-mode: both;
+        }
+        .fade-in {
+          animation-name: fade-in;
+        }
+        .zoom-in-95 {
+          animation-name: zoom-in-95;
+        }
+      `}</style>
     </div>
   );
 };

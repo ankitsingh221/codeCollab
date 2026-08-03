@@ -7,6 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Mail, Check, X, Loader2 } from 'lucide-react';
 
 const PendingInvitations = ({ onAccepted }) => {
+  // Design tokens matching Landing page
+  const raisedSm = {
+    background: "linear-gradient(160deg, #F7F8FA 0%, #E7E9EC 100%)",
+    boxShadow:
+      "4px 4px 10px rgba(163,167,178,0.4), -4px -4px 10px rgba(255,255,255,0.85)",
+    border: "1px solid rgba(255,255,255,0.5)",
+  };
+
+  const pressed = {
+    background: "linear-gradient(160deg, #E3E5E9 0%, #F0F1F4 100%)",
+    boxShadow:
+      "inset 3px 3px 7px rgba(163,167,178,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)",
+  };
+
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState(null);
@@ -93,11 +107,11 @@ const PendingInvitations = ({ onAccepted }) => {
   return (
     <div className="mb-8">
       <div className="flex items-center gap-2 mb-4">
-        <div className="p-1.5 bg-cyan-500/10 rounded-lg">
-          <Mail className="w-4 h-4 text-cyan-400" />
+        <div className="p-1.5 rounded-lg" style={pressed}>
+          <Mail className="w-4 h-4" style={{ color: '#C1652F' }} />
         </div>
-        <h2 className="text-sm font-medium text-white/70">
-          Pending Invitations <span className="text-white/30">({invitations.length})</span>
+        <h2 className="text-sm font-medium" style={{ color: '#4A4C53' }}>
+          Pending Invitations <span style={{ color: '#787B85' }}>({invitations.length})</span>
         </h2>
       </div>
 
@@ -107,22 +121,31 @@ const PendingInvitations = ({ onAccepted }) => {
           return (
             <div
               key={invId}
-              className="group relative bg-white/5 backdrop-blur-xl border border-cyan-400/20 rounded-2xl p-4 overflow-hidden hover:border-cyan-400/40 transition-all duration-500"
+              className="relative rounded-[16px] p-4 overflow-hidden transition-all duration-300 hover:scale-[1.01]"
+              style={raisedSm}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-
               <div className="relative flex items-start gap-3">
-                <div className="w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-rose-400/30 to-cyan-400/30 flex items-center justify-center text-xs font-medium text-white/80">
+                <div className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-xs font-medium"
+                  style={{
+                    ...pressed,
+                    color: '#2B2B2F'
+                  }}
+                >
                   {inv.invitedBy?.name?.charAt(0).toUpperCase() || 'U'}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm text-white/80 truncate">
-                    <span className="font-semibold text-white">{inv.invitedBy?.name}</span> invited you to
+                  <p className="text-sm truncate" style={{ color: '#787B85' }}>
+                    <span className="font-semibold" style={{ color: '#2B2B2F' }}>{inv.invitedBy?.name}</span> invited you to
                   </p>
-                  <p className="text-sm font-medium bg-gradient-to-r from-rose-400 to-cyan-400 bg-clip-text text-transparent truncate">
+                  <p className="text-sm font-medium truncate" style={{ color: '#C1652F' }}>
                     {inv.workspaceId?.name}
                   </p>
-                  <span className="inline-block mt-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/5 text-white/40 border border-white/10">
+                  <span className="inline-block mt-1.5 text-[10px] font-medium px-2 py-0.5 rounded-full"
+                    style={{
+                      ...pressed,
+                      color: '#787B85'
+                    }}
+                  >
                     {inv.role === 'owner' ? 'Owner' : 'Editor'} access
                   </span>
                 </div>
@@ -134,7 +157,17 @@ const PendingInvitations = ({ onAccepted }) => {
                   variant="ghost"
                   disabled={actingId === invId}
                   onClick={() => handleDecline(inv)}
-                  className="flex-1 text-white/40 hover:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all duration-300"
+                  className="flex-1 rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                  style={{
+                    ...raisedSm,
+                    color: '#787B85'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#C1652F';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#787B85';
+                  }}
                 >
                   <X className="w-4 h-4 mr-1" />
                   Decline
@@ -143,7 +176,14 @@ const PendingInvitations = ({ onAccepted }) => {
                   size="sm"
                   disabled={actingId === invId}
                   onClick={() => handleAccept(inv)}
-                  className="flex-1 bg-gradient-to-r from-cyan-500 to-cyan-400 hover:from-cyan-400 hover:to-cyan-300 text-black font-semibold rounded-xl transition-all duration-300"
+                  className="flex-1 font-bold rounded-xl transition-all duration-300 hover:scale-[1.02] active:scale-95"
+                  style={{
+                    background: "linear-gradient(160deg, #D07B47, #B0552A)",
+                    boxShadow:
+                      "4px 4px 10px rgba(163,167,178,0.4), -2px -2px 6px rgba(255,255,255,0.4), inset 0 1px 0 rgba(255,255,255,0.2)",
+                    color: '#FBF6F1',
+                    border: '1px solid rgba(255,255,255,0.15)'
+                  }}
                 >
                   {actingId === invId ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
