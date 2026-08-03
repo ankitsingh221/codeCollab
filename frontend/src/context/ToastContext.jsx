@@ -1,12 +1,24 @@
-import { createContext, useContext, useState, useCallback, useRef } from 'react';
-import { X, CheckCircle2, AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
+import {
+  X,
+  CheckCircle2,
+  AlertCircle,
+  AlertTriangle,
+  Info,
+} from "lucide-react";
 
 const ToastContext = createContext(null);
 
 export const useToast = () => {
   const context = useContext(ToastContext);
   if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
+    throw new Error("useToast must be used within a ToastProvider");
   }
   return context;
 };
@@ -21,13 +33,13 @@ export const ToastProvider = ({ children }) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const toast = useCallback(({ title, description, variant = 'default' }) => {
+  const toast = useCallback(({ title, description, variant = "default" }) => {
     const id = ++toastIdCounter.current;
-    
+
     // Create a unique key for the toast
     const key = `${title}|${description}|${variant}`;
     const now = Date.now();
-    
+
     // Check if this exact toast was shown recently (within 2 seconds)
     if (recentToasts.current.has(key)) {
       const lastShown = recentToasts.current.get(key);
@@ -35,19 +47,19 @@ export const ToastProvider = ({ children }) => {
         return; // Skip duplicate toast
       }
     }
-    
+
     // Store the toast in recent toasts
     recentToasts.current.set(key, now);
-    
+
     // Clean up old entries (older than 5 seconds)
     for (const [k, time] of recentToasts.current.entries()) {
       if (now - time > 5000) {
         recentToasts.current.delete(k);
       }
     }
-    
+
     setToasts((prev) => [...prev, { id, title, description, variant }]);
-    
+
     // Auto remove after 4 seconds
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id));
@@ -60,50 +72,62 @@ export const ToastProvider = ({ children }) => {
 
   const getIcon = (variant) => {
     switch (variant) {
-      case 'success':
-        return <CheckCircle2 className="w-5 h-5 text-green-400" />;
-      case 'destructive':
-        return <AlertCircle className="w-5 h-5 text-rose-400" />;
-      case 'warning':
-        return <AlertTriangle className="w-5 h-5 text-yellow-400" />;
+      case "success":
+        return <CheckCircle2 className="w-5 h-5" />;
+      case "destructive":
+        return <AlertCircle className="w-5 h-5" />;
+      case "warning":
+        return <AlertTriangle className="w-5 h-5" />;
       default:
-        return <Info className="w-5 h-5 text-cyan-400" />;
+        return <Info className="w-5 h-5" />;
     }
   };
 
   const getStyles = (variant) => {
     switch (variant) {
-      case 'success':
+      case "success":
         return {
-          bg: 'from-green-500/20 to-emerald-500/10',
-          border: 'border-green-500/30',
-          title: 'text-green-400',
-          desc: 'text-green-300/70',
-          glow: 'shadow-green-500/10'
+          panel: "from-emerald-500/10 via-teal-400/5 to-white/90",
+          border: "border-emerald-200/80",
+          title: "text-slate-800",
+          desc: "text-slate-600",
+          iconBg: "bg-emerald-50",
+          iconText: "text-emerald-600",
+          shadow: "shadow-[0_18px_45px_rgba(16,185,129,0.15)]",
+          accent: "from-emerald-500 to-teal-400",
         };
-      case 'destructive':
+      case "destructive":
         return {
-          bg: 'from-rose-500/20 to-red-500/10',
-          border: 'border-rose-500/30',
-          title: 'text-rose-400',
-          desc: 'text-rose-300/70',
-          glow: 'shadow-rose-500/10'
+          panel: "from-rose-500/10 via-red-400/5 to-white/90",
+          border: "border-rose-200/80",
+          title: "text-slate-800",
+          desc: "text-slate-600",
+          iconBg: "bg-rose-50",
+          iconText: "text-rose-600",
+          shadow: "shadow-[0_18px_45px_rgba(244,63,94,0.16)]",
+          accent: "from-rose-500 to-red-400",
         };
-      case 'warning':
+      case "warning":
         return {
-          bg: 'from-yellow-500/20 to-amber-500/10',
-          border: 'border-yellow-500/30',
-          title: 'text-yellow-400',
-          desc: 'text-yellow-300/70',
-          glow: 'shadow-yellow-500/10'
+          panel: "from-amber-500/10 via-orange-400/5 to-white/90",
+          border: "border-amber-200/80",
+          title: "text-slate-800",
+          desc: "text-slate-600",
+          iconBg: "bg-amber-50",
+          iconText: "text-amber-600",
+          shadow: "shadow-[0_18px_45px_rgba(245,158,11,0.16)]",
+          accent: "from-amber-500 to-orange-400",
         };
       default:
         return {
-          bg: 'from-cyan-500/20 to-blue-500/10',
-          border: 'border-cyan-500/30',
-          title: 'text-cyan-400',
-          desc: 'text-cyan-300/70',
-          glow: 'shadow-cyan-500/10'
+          panel: "from-sky-500/10 via-cyan-400/5 to-white/90",
+          border: "border-sky-200/80",
+          title: "text-slate-800",
+          desc: "text-slate-600",
+          iconBg: "bg-sky-50",
+          iconText: "text-sky-600",
+          shadow: "shadow-[0_18px_45px_rgba(14,165,233,0.15)]",
+          accent: "from-sky-500 to-cyan-400",
         };
     }
   };
@@ -111,43 +135,42 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={{ toast, toasts, removeToast }}>
       {children}
-      {/* Toast Container */}
-      <div className="fixed top-4 right-4 z-50 space-y-3 max-w-sm w-full pointer-events-none">
+      <div className="fixed top-4 right-4 z-[60] flex w-[min(92vw,24rem)] flex-col items-end gap-3 pointer-events-none">
         {toasts.map(({ id, title, description, variant }) => {
           const styles = getStyles(variant);
           const Icon = getIcon(variant);
-          
+
           return (
             <div
               key={id}
-              className={`pointer-events-auto relative bg-gradient-to-br ${styles.bg} backdrop-blur-xl border ${styles.border} rounded-2xl p-4 shadow-2xl ${styles.glow} animate-in slide-in-from-top-5 duration-300 hover:scale-[1.02] transition-transform`}
+              className={`toast-enter pointer-events-auto relative overflow-hidden rounded-[22px] border bg-gradient-to-br ${styles.panel} ${styles.border} ${styles.shadow} p-4 backdrop-blur-2xl shadow-[0_10px_35px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-0.5`}
             >
-              {/* Animated progress bar */}
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-white/20 to-transparent overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shrink"></div>
-              </div>
-
+              <div
+                className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${styles.accent}`}
+              />
               <div className="flex items-start gap-3">
-                <div className="shrink-0 mt-0.5">
+                <div
+                  className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${styles.iconBg} ${styles.iconText}`}
+                >
                   {Icon}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   {title && (
-                    <p className={`font-semibold text-sm ${styles.title}`}>
+                    <p className={`text-sm font-semibold ${styles.title}`}>
                       {title}
                     </p>
                   )}
                   {description && (
-                    <p className={`text-sm ${styles.desc} mt-0.5`}>
+                    <p className={`mt-1 text-sm leading-5 ${styles.desc}`}>
                       {description}
                     </p>
                   )}
                 </div>
                 <button
                   onClick={() => removeToast(id)}
-                  className="shrink-0 text-white/30 hover:text-white/70 transition-colors duration-200 p-1 rounded-lg hover:bg-white/10"
+                  className="shrink-0 rounded-xl p-1.5 text-slate-400 transition-colors duration-200 hover:bg-white/70 hover:text-slate-600"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -156,12 +179,19 @@ export const ToastProvider = ({ children }) => {
       </div>
 
       <style>{`
-        @keyframes shrink {
-          from { width: 100%; }
-          to { width: 0%; }
+        @keyframes toastEnter {
+          from {
+            opacity: 0;
+            transform: translateY(-8px) scale(0.97);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
-        .animate-shrink {
-          animation: shrink 4s linear forwards;
+
+        .toast-enter {
+          animation: toastEnter 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
         }
       `}</style>
     </ToastContext.Provider>
