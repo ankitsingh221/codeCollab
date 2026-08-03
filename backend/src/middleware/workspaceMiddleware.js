@@ -50,7 +50,7 @@ export const requireOwner = (req, res, next) => {
   next();
 };
 
-// Optional: Check if user is at least an editor
+//  Check if user is at least an editor
 export const requireEditor = (req, res, next) => {
   if (!req.membership) {
     return res.status(403).json({ 
