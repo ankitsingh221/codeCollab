@@ -23,6 +23,8 @@ import {
   Mail,
 } from 'lucide-react';
 
+import { connectSocket } from '../socket/socket';
+
 const InviteUser = () => {
   const { workspaceId } = useParams();
   const navigate = useNavigate();
@@ -34,12 +36,10 @@ const InviteUser = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-
   const fetchPending = async () => {
     try {
       const response = await invitationApi.getForWorkspace(workspaceId);
       setPending(response.data.invitations || []);
-      
     } catch (err) {
       console.error(err);
     } finally {
@@ -49,6 +49,22 @@ const InviteUser = () => {
 
   useEffect(() => {
     fetchPending();
+
+    const socket = connectSocket();
+
+    const handleRefresh = () => fetchPending();
+
+    socket.on("invitation:created", handleRefresh);
+    socket.on("invitation:accepted", handleRefresh);
+    socket.on("invitation:declined", handleRefresh);
+    socket.on("invitation:cancelled", handleRefresh);
+
+    return () => {
+      socket.off("invitation:created", handleRefresh);
+      socket.off("invitation:accepted", handleRefresh);
+      socket.off("invitation:declined", handleRefresh);
+      socket.off("invitation:cancelled", handleRefresh);
+    };
   }, [workspaceId]);
 
   const handleSubmit = async (e) => {

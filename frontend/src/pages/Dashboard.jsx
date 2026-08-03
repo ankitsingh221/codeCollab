@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
 import PendingInvitations from '../components/PendingInvitations';
+import { connectSocket } from '../socket/socket';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -39,6 +40,25 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchWorkspaces();
+
+    const socket = connectSocket();
+
+    const handleAccepted = ({ user: acceptedUser }) => {
+      fetchWorkspaces();
+      if (acceptedUser?.name) {
+        toast({
+          title: "Invitation Accepted",
+          description: `${acceptedUser.name} joined your workspace!`,
+          variant: "success",
+        });
+      }
+    };
+
+    socket.on("invitation:accepted", handleAccepted);
+
+    return () => {
+      socket.off("invitation:accepted", handleAccepted);
+    };
   }, []);
 
   const fetchWorkspaces = async () => {

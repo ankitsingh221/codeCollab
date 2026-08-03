@@ -21,6 +21,13 @@ export const registerSocketHandlers = (io) => {
   io.on("connection", (socket) => {
     const user = socket.user;
 
+    if (user?._id) {
+      socket.join(`user:${user._id.toString()}`);
+    }
+    if (user?.email) {
+      socket.join(`email:${user.email.toLowerCase()}`);
+    }
+
     // ---------- Workspace-wide presence (online users list) ----------
     socket.on("workspace:join", async ({ workspaceId }) => {
       try {

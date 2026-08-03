@@ -50,7 +50,26 @@ export const createInvitation = async (req, res) => {
       invitedBy: req.user._id,
     });
 
-    const populated = await invitation.populate("invitedBy", "name email");
+    const populated = await Invitation.findById(invitation._id)
+      .populate("invitedBy", "name email avatarUrl")
+      .populate("workspaceId", "name description");
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`email:${normalizedEmail}`).emit("invitation:received", {
+        invitation: populated,
+      });
+      if (existingUser?._id) {
+        io.to(`user:${existingUser._id.toString()}`).emit(
+          "invitation:received",
+          { invitation: populated },
+        );
+      }
+      io.to(`workspace:${workspaceId}`).emit("invitation:created", {
+        invitation: populated,
+      });
+    }
+
     return res.status(201).json({ invitation: populated });
   } catch (err) {
     console.error(err);
@@ -88,7 +107,19 @@ export const cancelInvitation = async (req, res) => {
     if (!invitation) {
       return res.status(404).json({ message: "Invitation not found" });
     }
+    const targetEmail = invitation.email;
     await invitation.deleteOne();
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`email:${targetEmail}`).emit("invitation:cancelled", {
+        invitationId,
+      });
+      io.to(`workspace:${workspaceId}`).emit("invitation:cancelled", {
+        invitationId,
+      });
+    }
+
     return res
       .status(200)
       .json({ message: "Invitation cancelled", invitationId });
@@ -167,6 +198,24 @@ export const acceptInvitation = async (req, res) => {
       );
     });
 
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`workspace:${invitation.workspaceId}`).emit("invitation:accepted", {
+        invitationId,
+        user: { _id: req.user._id, name: req.user.name, email: req.user.email },
+        workspace,
+      });
+      io.to(`user:${invitation.invitedBy.toString()}`).emit("invitation:accepted", {
+        invitationId,
+        user: { _id: req.user._id, name: req.user.name, email: req.user.email },
+        workspace,
+      });
+      io.to(`email:${invitation.email}`).emit("invitation:resolved", {
+        invitationId,
+        status: "accepted",
+      });
+    }
+
     return res.status(200).json({ message: "Invitation accepted", workspace });
   } catch (err) {
     console.error(err);
@@ -199,6 +248,20 @@ export const declineInvitation = async (req, res) => {
 
     invitation.status = "declined";
     await invitation.save();
+
+    const io = req.app.get("io");
+    if (io) {
+      io.to(`workspace:${invitation.workspaceId}`).emit("invitation:declined", {
+        invitationId,
+      });
+      io.to(`user:${invitation.invitedBy.toString()}`).emit("invitation:declined", {
+        invitationId,
+      });
+      io.to(`email:${invitation.email}`).emit("invitation:resolved", {
+        invitationId,
+        status: "declined",
+      });
+    }
 
     return res.status(200).json({ message: "Invitation declined" });
   } catch (err) {

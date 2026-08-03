@@ -144,3 +144,23 @@
     background: rgba(255, 255, 255, 0.2);
   }
 }
+
+/* Yjs Monaco Remote Cursor & Selection Styles (Google Docs style) */
+.monaco-editor .view-lines {
+  overflow: visible !important;
+}
+
+.monaco-editor .view-line {
+  overflow: visible !important;
+}
+
+.yRemoteSelection {
+  position: absolute;
+  pointer-events: none;
+}
+
+.yRemoteSelectionHead {
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+}

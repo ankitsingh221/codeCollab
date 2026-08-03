@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { invitationApi } from '../api/invitationApi';
 import { getId } from '../utils/getId';
+import { connectSocket } from '../socket/socket';
+import { useToast } from '../context/ToastContext';
 import { Button } from '@/components/ui/button';
 import { Mail, Check, X, Loader2 } from 'lucide-react';
 
@@ -8,6 +10,7 @@ const PendingInvitations = ({ onAccepted }) => {
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [actingId, setActingId] = useState(null);
+  const { toast } = useToast();
 
   const fetchInvitations = async () => {
     try {
@@ -22,6 +25,40 @@ const PendingInvitations = ({ onAccepted }) => {
 
   useEffect(() => {
     fetchInvitations();
+
+    const socket = connectSocket();
+
+    const handleReceived = ({ invitation }) => {
+      if (!invitation) return;
+      setInvitations((prev) => {
+        const id = getId(invitation);
+        if (prev.some((i) => getId(i) === id)) return prev;
+        return [invitation, ...prev];
+      });
+      toast({
+        title: "Workspace Invitation Received",
+        description: `${invitation.invitedBy?.name || "Someone"} invited you to join ${invitation.workspaceId?.name || "a workspace"}`,
+        variant: "info",
+      });
+    };
+
+    const handleCancelled = ({ invitationId }) => {
+      setInvitations((prev) => prev.filter((i) => getId(i) !== invitationId));
+    };
+
+    const handleResolved = ({ invitationId }) => {
+      setInvitations((prev) => prev.filter((i) => getId(i) !== invitationId));
+    };
+
+    socket.on("invitation:received", handleReceived);
+    socket.on("invitation:cancelled", handleCancelled);
+    socket.on("invitation:resolved", handleResolved);
+
+    return () => {
+      socket.off("invitation:received", handleReceived);
+      socket.off("invitation:cancelled", handleCancelled);
+      socket.off("invitation:resolved", handleResolved);
+    };
   }, []);
 
   const handleAccept = async (invitation) => {
