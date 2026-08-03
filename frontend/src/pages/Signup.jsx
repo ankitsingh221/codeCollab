@@ -6,12 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Code2, Loader2, AlertCircle, Sparkles, ArrowRight, User, Mail, Lock } from "lucide-react";
+import { Code2, Loader2, AlertCircle, Sparkles, ArrowRight, User, Mail, Lock, Shield, CheckCircle2 } from "lucide-react";
 
 const Signup = () => {
   const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
   const { signup } = useAuth();
   const navigate = useNavigate();
 
@@ -31,86 +32,148 @@ const Signup = () => {
     }
   };
 
+  // Design tokens matching Landing page
+  const raised = {
+    background: "linear-gradient(160deg, #F7F8FA 0%, #E5E7EB 100%)",
+    boxShadow:
+      "7px 7px 16px rgba(163,167,178,0.45), -7px -7px 16px rgba(255,255,255,0.85), inset 0 1px 0 rgba(255,255,255,0.6)",
+    border: "1px solid rgba(255,255,255,0.5)",
+  };
+
+  const raisedSm = {
+    background: "linear-gradient(160deg, #F7F8FA 0%, #E7E9EC 100%)",
+    boxShadow:
+      "4px 4px 10px rgba(163,167,178,0.4), -4px -4px 10px rgba(255,255,255,0.85)",
+    border: "1px solid rgba(255,255,255,0.5)",
+  };
+
+  const pressed = {
+    background: "linear-gradient(160deg, #E3E5E9 0%, #F0F1F4 100%)",
+    boxShadow:
+      "inset 3px 3px 7px rgba(163,167,178,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)",
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] via-[#0d0d0d] to-[#0a0a0a] text-white flex items-center justify-center px-4 relative overflow-hidden">
-      {/* Animated gradient orbs */}
-      <div className="absolute top-[-300px] right-[-200px] w-[600px] h-[600px] rounded-full bg-rose-500/10 blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-[-300px] left-[-200px] w-[600px] h-[600px] rounded-full bg-cyan-500/10 blur-3xl animate-pulse delay-1000"></div>
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] rounded-full bg-rose-500/5 blur-3xl"></div>
-      
-      {/* Glass overlay lines */}
+    <div 
+      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      style={{ background: "#ECEDF0" }}
+    >
+      {/* Paper-grain texture */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-20"
+        className="absolute inset-0 pointer-events-none opacity-[0.4]"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cdefs%3E%3Cpattern id='grid' width='60' height='60' patternUnits='userSpaceOnUse'%3E%3Cpath d='M60 0 L0 0 0 60' fill='none' stroke='rgba(255,255,255,0.05)' stroke-width='0.5'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100%25' height='100%25' fill='url(%23grid)'/%3E%3C/svg%3E")`,
+          backgroundImage:
+            "radial-gradient(rgba(0,0,0,0.015) 1px, transparent 1px)",
+          backgroundSize: "3px 3px",
         }}
       />
 
       <div className="w-full max-w-md relative z-10">
         {/* Logo */}
-        <div className="flex items-center gap-3 justify-center mb-8 group">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-rose-400 to-cyan-400 rounded-lg blur-md opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
-            <div className="relative bg-black/50 p-2.5 rounded-lg border border-white/10">
-              <Code2 className="text-white" size={15} />
-            </div>
+        <div className="flex items-center gap-3 justify-center mb-8 group cursor-pointer">
+          <div
+            className="relative p-2.5 rounded-xl transition-all duration-300 group-hover:scale-105"
+            style={pressed}
+          >
+            <Code2 className="text-[#C1652F]" size={22} />
           </div>
-          <span className="text-2xl font-light tracking-tight bg-gradient-to-r from-white to-white/70 bg-clip-text text-transparent">
-            Code<span className="font-bold bg-gradient-to-r from-rose-400 to-cyan-400 bg-clip-text text-transparent">Collab</span>
+          <span className="text-2xl font-bold tracking-tight transition-all duration-300 group-hover:scale-105" style={{ color: "#2B2B2F" }}>
+            Code<span style={{ color: "#C1652F" }}>Collab</span>
           </span>
         </div>
 
-        {/* Glass Card */}
-        <Card className="relative bg-white/5 backdrop-blur-xl border-white/10 shadow-2xl rounded-2xl overflow-hidden">
-          {/* Card glow effect */}
-          <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-cyan-500/5 pointer-events-none"></div>
-          
+        {/* Card with raised effect */}
+        <Card 
+          className="relative transition-all duration-300 hover:scale-[1.01]"
+          style={{
+            ...raised,
+            borderRadius: "20px",
+          }}
+        >
           <CardHeader className="relative">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 text-xs text-white/60 tracking-wider uppercase mb-2 w-fit">
-              <Sparkles className="w-3 h-3 text-rose-400" />
-              <span className="bg-gradient-to-r from-rose-400 to-cyan-400 bg-clip-text text-transparent font-semibold">Get started</span>
+            <div
+              className="inline-flex items-center gap-2 px-5 py-2 mb-4 w-fit rounded-full transition-all duration-300"
+              style={pressed}
+            >
+              <Sparkles className="w-3 h-3" style={{ color: "#C1652F" }} />
+              <span
+                className="text-[11px] tracking-[0.15em] uppercase font-bold"
+                style={{ color: "#6B6D75" }}
+              >
+                Get started
+              </span>
+              <span
+                className="w-1.5 h-1.5 rounded-full animate-pulse"
+                style={{ background: "#C1652F" }}
+              />
             </div>
-            <CardTitle className="text-2xl font-light text-white">
+            <CardTitle className="text-2xl font-bold tracking-tight" style={{ color: "#26262B" }}>
               Create your account
             </CardTitle>
-            <CardDescription className="text-white/40">
+            <CardDescription style={{ color: "#787B85" }}>
               Start collaborating with your team in seconds.
             </CardDescription>
           </CardHeader>
-          
+
           <CardContent className="relative">
             {error && (
-              <Alert variant="destructive" className="mb-4 bg-rose-500/10 border-rose-500/20 text-rose-400">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{error}</AlertDescription>
+              <Alert 
+                className="mb-4 transition-all duration-300"
+                style={{
+                  ...pressed,
+                  borderRadius: "12px",
+                  border: "1px solid rgba(193,101,47,0.15)",
+                }}
+              >
+                <AlertCircle className="h-4 w-4" style={{ color: "#C1652F" }} />
+                <AlertDescription style={{ color: "#6B4A3A" }}>{error}</AlertDescription>
               </Alert>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-white/60 text-sm font-medium">
+                <Label htmlFor="name" className="text-sm font-medium flex items-center gap-2" style={{ color: "#4A4C53" }}>
+                  <User className="w-3.5 h-3.5" style={{ color: "#C1652F" }} />
                   Full Name
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
                   <Input
                     id="name"
                     name="name"
                     required
                     value={form.name}
                     onChange={handleChange}
+                    onFocus={() => setFocusedField('name')}
+                    onBlur={() => setFocusedField(null)}
                     placeholder="Jane Doe"
-                    className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-rose-400/50 focus:ring-rose-400/20 rounded-xl transition-all duration-300"
+                    className="pl-10 transition-all duration-300"
+                    style={{
+                      ...(focusedField === 'name' ? pressed : raisedSm),
+                      borderRadius: "12px",
+                      border: focusedField === 'name' 
+                        ? "2px solid #C1652F" 
+                        : "1px solid rgba(255,255,255,0.5)",
+                      color: "#2B2B2F",
+                      padding: "12px 16px 12px 40px",
+                      fontSize: "14px",
+                      background: focusedField === 'name' 
+                        ? "linear-gradient(160deg, #E3E5E9 0%, #F0F1F4 100%)"
+                        : "linear-gradient(160deg, #F7F8FA 0%, #E7E9EC 100%)",
+                    }}
+                  />
+                  <User 
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-all duration-300"
+                    style={{ color: focusedField === 'name' ? '#C1652F' : '#787B85' }}
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-white/60 text-sm font-medium">
+                <Label htmlFor="email" className="text-sm font-medium flex items-center gap-2" style={{ color: "#4A4C53" }}>
+                  <Mail className="w-3.5 h-3.5" style={{ color: "#C1652F" }} />
                   Email Address
                 </Label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
                   <Input
                     id="email"
                     type="email"
@@ -118,18 +181,37 @@ const Signup = () => {
                     required
                     value={form.email}
                     onChange={handleChange}
+                    onFocus={() => setFocusedField('email')}
+                    onBlur={() => setFocusedField(null)}
                     placeholder="you@example.com"
-                    className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-rose-400/50 focus:ring-rose-400/20 rounded-xl transition-all duration-300"
+                    className="pl-10 transition-all duration-300"
+                    style={{
+                      ...(focusedField === 'email' ? pressed : raisedSm),
+                      borderRadius: "12px",
+                      border: focusedField === 'email' 
+                        ? "2px solid #C1652F" 
+                        : "1px solid rgba(255,255,255,0.5)",
+                      color: "#2B2B2F",
+                      padding: "12px 16px 12px 40px",
+                      fontSize: "14px",
+                      background: focusedField === 'email' 
+                        ? "linear-gradient(160deg, #E3E5E9 0%, #F0F1F4 100%)"
+                        : "linear-gradient(160deg, #F7F8FA 0%, #E7E9EC 100%)",
+                    }}
+                  />
+                  <Mail 
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-all duration-300"
+                    style={{ color: focusedField === 'email' ? '#C1652F' : '#787B85' }}
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-white/60 text-sm font-medium">
+                <Label htmlFor="password" className="text-sm font-medium flex items-center gap-2" style={{ color: "#4A4C53" }}>
+                  <Lock className="w-3.5 h-3.5" style={{ color: "#C1652F" }} />
                   Password
                 </Label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
                   <Input
                     id="password"
                     type="password"
@@ -138,67 +220,105 @@ const Signup = () => {
                     minLength={6}
                     value={form.password}
                     onChange={handleChange}
+                    onFocus={() => setFocusedField('password')}
+                    onBlur={() => setFocusedField(null)}
                     placeholder="At least 6 characters"
-                    className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:border-rose-400/50 focus:ring-rose-400/20 rounded-xl transition-all duration-300"
+                    className="pl-10 transition-all duration-300"
+                    style={{
+                      ...(focusedField === 'password' ? pressed : raisedSm),
+                      borderRadius: "12px",
+                      border: focusedField === 'password' 
+                        ? "2px solid #C1652F" 
+                        : "1px solid rgba(255,255,255,0.5)",
+                      color: "#2B2B2F",
+                      padding: "12px 16px 12px 40px",
+                      fontSize: "14px",
+                      background: focusedField === 'password' 
+                        ? "linear-gradient(160deg, #E3E5E9 0%, #F0F1F4 100%)"
+                        : "linear-gradient(160deg, #F7F8FA 0%, #E7E9EC 100%)",
+                    }}
+                  />
+                  <Lock 
+                    className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 transition-all duration-300"
+                    style={{ color: focusedField === 'password' ? '#C1652F' : '#787B85' }}
                   />
                 </div>
-                <p className="text-[10px] text-white/20 mt-1">Must be at least 6 characters long</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <CheckCircle2 
+                    className="w-3.5 h-3.5 transition-all duration-300" 
+                    style={{ color: form.password.length >= 6 ? '#6B9E6B' : '#787B85' }} 
+                  />
+                  <p className="text-[11px] font-medium transition-all duration-300"
+                    style={{ color: form.password.length >= 6 ? '#6B9E6B' : '#787B85' }}
+                  >
+                    {form.password.length >= 6 ? 'Password strength: Good' : 'Must be at least 6 characters long'}
+                  </p>
+                </div>
               </div>
-              
-              <Button 
-                type="submit" 
-                disabled={loading} 
-                className="w-full bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-400 hover:to-rose-300 text-white font-semibold rounded-xl py-6 hover:shadow-xl hover:shadow-rose-500/25 transition-all duration-300 border border-white/20"
+
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full font-bold transition-all duration-300 hover:scale-[1.02] active:scale-95 group"
+                style={{
+                  background: "linear-gradient(160deg, #D07B47, #B0552A)",
+                  boxShadow:
+                    "6px 6px 14px rgba(163,167,178,0.5), -3px -3px 10px rgba(255,255,255,0.4), inset 0 1px 0 rgba(255,255,255,0.25)",
+                  borderRadius: "14px",
+                  color: "#FBF6F1",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  padding: "14px 20px",
+                  fontSize: "16px",
+                }}
               >
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 {loading ? "Creating account..." : "Create Account"}
-                {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
+                {!loading && (
+                  <ArrowRight className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                )}
               </Button>
             </form>
 
             <div className="relative my-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/5"></div>
+                <div className="w-full border-t" style={{ borderColor: "rgba(163,167,178,0.25)" }}></div>
               </div>
               <div className="relative flex justify-center text-xs">
-                <span className="px-3 bg-[#0d0d0d] text-white/20">already a member?</span>
+                <span 
+                  className="px-3" 
+                  style={{ 
+                    background: "linear-gradient(160deg, #F7F8FA 0%, #E5E7EB 100%)",
+                    color: "#787B85"
+                  }}
+                >
+                  already a member?
+                </span>
               </div>
             </div>
 
-            <p className="text-sm text-white/40 text-center">
+            <p className="text-sm text-center" style={{ color: "#787B85" }}>
               Already have an account?{" "}
-              <Link to="/login" className="text-rose-400 hover:text-rose-300 font-medium hover:underline transition-all duration-300">
+              <Link 
+                to="/login" 
+                className="font-medium transition-all duration-300 hover:underline"
+                style={{ color: "#C1652F" }}
+              >
                 Log in
               </Link>
-            </p>
-
-            {/* Terms notice */}
-            <p className="text-[10px] text-white/20 text-center mt-4">
-              By signing up, you agree to our{" "}
-              <a href="#" className="text-white/30 hover:text-rose-400 transition-colors duration-300">
-                Terms of Service
-              </a>{" "}
-              and{" "}
-              <a href="#" className="text-white/30 hover:text-rose-400 transition-colors duration-300">
-                Privacy Policy
-              </a>
             </p>
           </CardContent>
         </Card>
 
-        {/* Footer note */}
-        <p className="text-xs text-white/20 text-center mt-6">
-          Secure signup · Encrypted connection
-        </p>
+        {/* Footer */}
+        <div className="flex items-center justify-center gap-4 text-xs mt-6" style={{ color: "#787B85" }}>
+          <span className="flex items-center gap-1">
+            <Shield className="w-3 h-3" style={{ color: "#C1652F" }} />
+            Secure signup
+          </span>
+          <span className="w-px h-3" style={{ background: "rgba(163,167,178,0.25)" }}></span>
+          <span>Encrypted connection</span>
+        </div>
       </div>
-
-      <style>{`
-        @keyframes gradient {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-      `}</style>
     </div>
   );
 };
