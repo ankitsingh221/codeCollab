@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { workspaceApi } from '../api/workspaceApi';
@@ -23,9 +23,6 @@ import {
   X,
   UserCog,
   Crown,
-  Mail,
-  Shield,
-  Pencil,
 } from 'lucide-react';
 import CreateWorkspaceModal from '../components/CreateWorkspaceModal';
 import PendingInvitations from '../components/PendingInvitations';
@@ -63,6 +60,34 @@ const Dashboard = () => {
       "inset 3px 3px 7px rgba(163,167,178,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)",
   };
 
+  const fetchWorkspaces = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await workspaceApi.getWorkspaces();
+
+      const processedWorkspaces = response.data.workspaces.map(ws => {
+        if (!ws.memberCount && ws.members) {
+          ws.memberCount = Array.isArray(ws.members) ? ws.members.length : 0;
+        }
+        if (!ws.memberCount) {
+          ws.memberCount = 1;
+        }
+        return ws;
+      });
+
+      setWorkspaces(processedWorkspaces || []);
+    } catch (error) {
+      console.error('Error fetching workspaces:', error);
+      toast({
+        title: "Error",
+        description: error.response?.data?.message || "Failed to fetch workspaces.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     fetchWorkspaces();
 
@@ -84,35 +109,7 @@ const Dashboard = () => {
     return () => {
       socket.off("invitation:accepted", handleAccepted);
     };
-  }, []);
-
-  const fetchWorkspaces = async () => {
-    setLoading(true);
-    try {
-      const response = await workspaceApi.getWorkspaces();
-      
-      const processedWorkspaces = response.data.workspaces.map(ws => {
-        if (!ws.memberCount && ws.members) {
-          ws.memberCount = Array.isArray(ws.members) ? ws.members.length : 0;
-        }
-        if (!ws.memberCount) {
-          ws.memberCount = 1;
-        }
-        return ws;
-      });
-      
-      setWorkspaces(processedWorkspaces || []);
-    } catch (error) {
-      console.error('Error fetching workspaces:', error);
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to fetch workspaces.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchWorkspaces, toast]);
 
   const handleDeleteWorkspace = async (id, name) => {
     if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
