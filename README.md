@@ -301,6 +301,3 @@ All routes are prefixed with `/api`.
 
 **Rooms:** `workspace:<id>`, `file:<id>`, `user:<id>`, `email:<email>`
 
-## License
-
-This project is open source. See the repository for license details.
