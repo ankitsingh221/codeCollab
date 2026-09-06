@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fileApi } from "../api/fileApi";
-import { Plus, Loader2, X, FilePlus2, FolderPlus } from "lucide-react";
+import { Plus, Loader2, X, FolderPlus } from "lucide-react";
 
 const QUICK_TEMPLATES = [
   { label: "HTML", ext: "html" },
@@ -12,7 +12,7 @@ const QUICK_TEMPLATES = [
   { label: "C++", ext: "cpp" },
 ];
 
-const CreateFileDialog = ({ workspaceId, onCreated }) => {
+const CreateFileDialog = ({ workspaceId, onCreated, open: controlledOpen, onOpenChange }) => {
   // Design tokens matching Landing page
   const raisedSm = {
     background: "linear-gradient(160deg, #F7F8FA 0%, #E7E9EC 100%)",
@@ -27,11 +27,18 @@ const CreateFileDialog = ({ workspaceId, onCreated }) => {
       "inset 3px 3px 7px rgba(163,167,178,0.5), inset -3px -3px 7px rgba(255,255,255,0.9)",
   };
 
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [focused, setFocused] = useState(false);
+
+  // Works controlled (command palette) or uncontrolled (sidebar button)
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (value) => {
+    if (onOpenChange) onOpenChange(value);
+    else setInternalOpen(value);
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
