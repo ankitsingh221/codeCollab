@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as Y from "yjs";
 import * as awarenessProtocol from "y-protocols/awareness";
 import { MonacoBinding } from "y-monaco";
-import { connectSocket } from "../socket/socket";
+import { connectSocket, addActiveFile, removeActiveFile } from "../socket/socket";
 
 const COLORS = [
   "#f43f5e",
@@ -47,11 +47,16 @@ const escapeCssString = (str) => {
   return String(str).replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, " ");
 };
 
+const TYPING_IDLE_MS = 1500;
+
 export const useYjsFile = ({ file, user, editorInstance }) => {
   const [connected, setConnected] = useState(false);
+  const [presentUsers, setPresentUsers] = useState([]);
+  const [typingUsers, setTypingUsers] = useState([]);
   const docRef = useRef(null);
   const awarenessRef = useRef(null);
   const bindingRef = useRef(null);
+  const clearTypingRef = useRef(null);
 
   // Keep local awareness user info up to date
   useEffect(() => {
@@ -71,12 +76,32 @@ export const useYjsFile = ({ file, user, editorInstance }) => {
     const awareness = new awarenessProtocol.Awareness(doc);
     docRef.current = doc;
     awarenessRef.current = awareness;
-    setConnected(false);
+    addActiveFile(file._id);
 
     awareness.setLocalStateField("user", {
       name: user?.name || "Anonymous",
       color: colorForUser(user?.id || user?._id || "anon"),
     });
+
+    // ---- Typing indicator: broadcast only on/off transitions (a boolean
+    // flag, never absolute timestamps — comparing Date.now() across machines
+    // breaks with clock skew). Viewers react instantly via awareness events.
+    let typingTimeout = null;
+    let typingActive = false;
+    const setTypingFlag = (value) => {
+      typingActive = value;
+      awareness.setLocalStateField("typing", value ? true : null);
+    };
+    const markTyping = () => {
+      clearTimeout(typingTimeout);
+      if (!typingActive) setTypingFlag(true);
+      typingTimeout = setTimeout(() => setTypingFlag(false), TYPING_IDLE_MS);
+    };
+    const clearTyping = () => {
+      clearTimeout(typingTimeout);
+      if (typingActive) setTypingFlag(false);
+    };
+    clearTypingRef.current = clearTyping;
 
     const updateCursorStyles = () => {
       let styleEl = document.getElementById("yjs-live-cursors");
@@ -140,24 +165,49 @@ export const useYjsFile = ({ file, user, editorInstance }) => {
     awareness.on("change", updateCursorStyles);
     updateCursorStyles();
 
+    // Presence list — updated from awareness events (callback, not effect body).
+    // Compare before setting so remote cursor moves don't cause re-renders.
+    const refreshPresence = () => {
+      const users = Array.from(awareness.getStates().values())
+        .map((s) => s.user)
+        .filter(Boolean);
+      setPresentUsers((prev) =>
+        prev.length === users.length &&
+        users.every((u) =>
+          prev.some((p) => p.name === u.name && p.color === u.color),
+        )
+          ? prev
+          : users,
+      );
+    };
+    awareness.on("change", refreshPresence);
+    refreshPresence();
+
+    // Typing indicators — derived reactively from the same awareness events
+    const computeTypingUsers = () => {
+      const names = [];
+      awareness.getStates().forEach((state, clientId) => {
+        if (clientId !== doc.clientID && state.user && state.typing) {
+          names.push(state.user.name);
+        }
+      });
+      setTypingUsers((prev) =>
+        prev.length === names.length && names.every((n) => prev.includes(n))
+          ? prev
+          : names,
+      );
+    };
+    awareness.on("change", computeTypingUsers);
+    computeTypingUsers();
+
     const handleSync = ({ fileId, update }) => {
       if (fileId !== file._id) return;
-      try {
-        console.debug(
-          `[useYjsFile] handleSync file=${fileId} bytes=${update?.length || 0}`,
-        );
-      } catch (e) {}
       Y.applyUpdate(doc, new Uint8Array(update), "remote");
       setConnected(true);
     };
 
     const handleRemoteUpdate = ({ fileId, update }) => {
       if (fileId !== file._id) return;
-      try {
-        console.debug(
-          `[useYjsFile] handleRemoteUpdate file=${fileId} bytes=${update?.length || 0}`,
-        );
-      } catch (e) {}
       Y.applyUpdate(doc, new Uint8Array(update), "remote");
     };
 
@@ -172,11 +222,7 @@ export const useYjsFile = ({ file, user, editorInstance }) => {
 
     const handleLocalDocUpdate = (update, origin) => {
       if (origin === "remote") return;
-      try {
-        console.debug(
-          `[useYjsFile] local update file=${file._id} origin=${origin} bytes=${update?.length || 0}`,
-        );
-      } catch (e) {}
+      markTyping();
       socket.emit("file:update", {
         fileId: file._id,
         update: Array.from(update),
@@ -205,6 +251,10 @@ export const useYjsFile = ({ file, user, editorInstance }) => {
     socket.emit("file:join", { fileId: file._id });
 
     return () => {
+      clearTypingRef.current = null;
+      clearTyping();
+      removeActiveFile(file._id);
+      setConnected(false);
       socket.emit("file:leave", { fileId: file._id });
       socket.off("file:sync", handleSync);
       socket.off("file:update", handleRemoteUpdate);
@@ -212,6 +262,8 @@ export const useYjsFile = ({ file, user, editorInstance }) => {
       doc.off("update", handleLocalDocUpdate);
       awareness.off("update", handleLocalAwarenessUpdate);
       awareness.off("change", updateCursorStyles);
+      awareness.off("change", refreshPresence);
+      awareness.off("change", computeTypingUsers);
 
       bindingRef.current?.destroy();
       bindingRef.current = null;
@@ -272,6 +324,7 @@ export const useYjsFile = ({ file, user, editorInstance }) => {
     // Monaco editor focus/blur listeners
     const blurDisposable = editorInstance.onDidBlurEditorWidget(() => {
       clearSelection();
+      clearTypingRef.current?.();
       if (idleTimer) clearTimeout(idleTimer);
     });
 
@@ -294,6 +347,7 @@ export const useYjsFile = ({ file, user, editorInstance }) => {
 
     const handleWindowBlur = () => {
       clearSelection();
+      clearTypingRef.current?.();
     };
 
     if (containerEl) {
@@ -316,5 +370,7 @@ export const useYjsFile = ({ file, user, editorInstance }) => {
     };
   }, [editorInstance, file?._id]);
 
-  return { connected, awareness: awarenessRef.current };
+  return { connected, presentUsers, typingUsers };
 };
+
+export default useYjsFile;
