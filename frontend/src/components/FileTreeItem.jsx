@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { fileApi } from '../api/fileApi';
 import { LANGUAGE_META } from '../utils/languageMap';
-import { Pencil, Trash2, Loader2, Check, X, File, Folder } from 'lucide-react';
+import { Pencil, Trash2, Loader2, Check, X } from 'lucide-react';
 
 const FileTreeItem = ({ file, workspaceId, isActive, onSelect, onRenamed, onDeleted }) => {
   // Design tokens matching Landing page

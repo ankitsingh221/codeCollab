@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { executionApi } from "../api/executionApi";
 import { Button } from "@/components/ui/button";
-import { Play, Loader2, Terminal, Trash2, X } from "lucide-react";
+import { Play, Loader2, Terminal, Trash2 } from "lucide-react";
 
 const pressedStyle = {
   background: "linear-gradient(160deg, #E3E5E9 0%, #F0F1F4 100%)",

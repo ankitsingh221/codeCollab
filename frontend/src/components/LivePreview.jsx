@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { buildPreviewDoc } from '../utils/buildPreviewDoc';
-import { RefreshCw, Eye, Monitor } from 'lucide-react';
+import { RefreshCw, Monitor } from 'lucide-react';
 
 const LivePreview = ({ files, refreshKey, onRefresh }) => {
   // Design tokens matching Landing page
