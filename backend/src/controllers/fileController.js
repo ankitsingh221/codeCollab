@@ -6,10 +6,19 @@ import {
 
 export const getFiles = async (req, res) => {
   try {
-    const files = await File.find({ workspaceId: req.params.workspaceId })
-      .select("name language createdBy createdAt updatedAt")
+    // ?includeContent=true returns full documents in one round-trip,
+    // so clients don't need an extra request per file (N+1)
+    const includeContent = req.query.includeContent === "true";
+
+    const query = File.find({ workspaceId: req.params.workspaceId })
       .populate("createdBy", "name")
       .sort({ name: 1 });
+
+    if (!includeContent) {
+      query.select("name language createdBy createdAt updatedAt");
+    }
+
+    const files = await query;
 
     return res.status(200).json({ files });
   } catch (err) {

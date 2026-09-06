@@ -1,7 +1,11 @@
 import axiosClient from "./axiosClient";
 
 export const fileApi = {
-  getAll: (workspaceId) => axiosClient.get(`/workspaces/${workspaceId}/files`),
+  // includeContent fetches full documents in one request instead of one per file
+  getAll: (workspaceId, { includeContent = false } = {}) =>
+    axiosClient.get(`/workspaces/${workspaceId}/files`, {
+      params: includeContent ? { includeContent: "true" } : undefined,
+    }),
   getById: (workspaceId, fileId) =>
     axiosClient.get(`/workspaces/${workspaceId}/files/${fileId}`),
   create: (workspaceId, name) =>
